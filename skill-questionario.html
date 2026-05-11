@@ -93,9 +93,12 @@
       position: relative;
       display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: .45rem; align-items: center;
       padding: .5rem .56rem; border: 1px solid rgba(190,242,255,.12); border-radius: var(--r);
-      background: rgba(255,255,255,.035); cursor: pointer;
+      background: rgba(255,255,255,.035); cursor: grab;
     }
+    .skill-item:active { cursor: grabbing; }
     .skill-item:hover, .skill-item.active { border-color: var(--cyan); background: rgba(110,231,249,.1); }
+    .skill-item.dragging { opacity: .48; border-style: dashed; }
+    .skill-item.drag-over { border-color: var(--green); box-shadow: 0 0 0 1px rgba(125,211,168,.26), 0 0 16px rgba(125,211,168,.18); }
     .skill-item.is-variant { border-style: dashed; }
     .skill-item.has-links { box-shadow: 0 0 0 1px rgba(110,231,249,.18), 0 0 18px rgba(110,231,249,.16); }
     .skill-item.has-issues { border-color: rgba(251,113,133,.62); box-shadow: 0 0 0 1px rgba(251,113,133,.2), 0 0 20px rgba(251,113,133,.34); }
@@ -334,11 +337,13 @@
     const branchMap = { stance: 'Equilibrio', gait: 'Andatura', break: 'Frenata', rotation: 'Rotazione' }
     const branchTone = { Equilibrio: 'Stance', Andatura: 'Gait', Frenata: 'Brake', Rotazione: 'Rotation', Extra: 'Extra' }
     const localKey = 'skillQuestionarioDrafts'
+    const orderKey = 'skillQuestionarioCatalogOrder'
     let sb = null
     let session = null
     let skills = []
     let definitions = new Map()
     let currentIndex = 0
+    let draggedSkillName = null
 
     try { sb = supabase.createClient(SUPA_URL, SUPA_KEY) } catch (e) { setGlobal('SDK Supabase non disponibile: ' + e.message, 'msg-err') }
 
@@ -363,6 +368,25 @@
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, ' ')
         .trim()
+    }
+
+    function applyCatalogOrder() {
+      let orderedNames = []
+      try { orderedNames = JSON.parse(localStorage.getItem(orderKey) || '[]') } catch (e) { orderedNames = [] }
+      if (!orderedNames.length) return
+      const order = new Map(orderedNames.map((name, index) => [normalizeName(name), index]))
+      skills = skills
+        .map((skill, index) => ({ skill, index }))
+        .sort((a, b) => {
+          const ai = order.has(normalizeName(a.skill.skill_nome)) ? order.get(normalizeName(a.skill.skill_nome)) : Number.MAX_SAFE_INTEGER
+          const bi = order.has(normalizeName(b.skill.skill_nome)) ? order.get(normalizeName(b.skill.skill_nome)) : Number.MAX_SAFE_INTEGER
+          return ai - bi || a.index - b.index
+        })
+        .map(item => item.skill)
+    }
+
+    function saveCatalogOrder() {
+      localStorage.setItem(orderKey, JSON.stringify(skills.map(skill => skill.skill_nome)))
     }
 
     function skillCatalogForMatch() {
@@ -581,6 +605,7 @@
 
     async function boot() {
       skills = (window.SKILLTREE_NODES || []).map(normalizeNode)
+      applyCatalogOrder()
       const branchSelect = document.getElementById('filter-branch')
       branchSelect.innerHTML = '<option value="">Tutti</option>' + BRANCHES.map(r => `<option>${r}</option>`).join('')
       if (sb) {
@@ -614,6 +639,7 @@
         skills.push(definitionAsSkill(def))
         known.add(key)
       })
+      applyCatalogOrder()
     }
 
     function renderAuth() {
@@ -733,13 +759,57 @@
         ].filter(Boolean).join(' ')
         const issueText = issues.join(' · ')
         const issueAttrs = issues.length ? ` title="${esc(issueText)}" data-issue="${esc(issueText)}"` : ''
-        return `<button class="${classes}"${issueAttrs} onclick="selectSkill('${esc(skill.skill_nome)}')">
+        const skillArg = JSON.stringify(skill.skill_nome).replace(/'/g, '&#39;')
+        return `<button class="${classes}"${issueAttrs} draggable="true" data-skill="${esc(skill.skill_nome)}" onclick='selectSkill(${skillArg})' ondragstart='startSkillDrag(event, ${skillArg})' ondragover="overSkillDrag(event)" ondragleave="leaveSkillDrag(event)" ondrop='dropSkillDrag(event, ${skillArg})' ondragend="endSkillDrag()">
           <b class="skill-check ${isReviewed ? 'on' : ''}">✓</b>
           <span><strong>${esc(skill.skill_nome)}</strong><span>${esc(merged.ramo)} · ${esc(merged.fascia_livello)}</span></span>
           <i class="dot ${cls}"></i>
         </button>`
       }).join('') || '<p>Nessuna skill in questo filtro.</p>'
       renderStats()
+    }
+
+    function startSkillDrag(event, skillName) {
+      draggedSkillName = skillName
+      event.currentTarget.classList.add('dragging')
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', skillName)
+    }
+
+    function overSkillDrag(event) {
+      if (!draggedSkillName) return
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+      event.currentTarget.classList.add('drag-over')
+    }
+
+    function leaveSkillDrag(event) {
+      event.currentTarget.classList.remove('drag-over')
+    }
+
+    function dropSkillDrag(event, targetName) {
+      event.preventDefault()
+      document.querySelectorAll('.skill-item.drag-over, .skill-item.dragging').forEach(el => el.classList.remove('drag-over', 'dragging'))
+      const sourceName = draggedSkillName || event.dataTransfer.getData('text/plain')
+      draggedSkillName = null
+      if (!sourceName || sourceName === targetName) return
+      const selectedName = skills[currentIndex]?.skill_nome
+      const from = skills.findIndex(skill => skill.skill_nome === sourceName)
+      const to = skills.findIndex(skill => skill.skill_nome === targetName)
+      if (from < 0 || to < 0) return
+      const [moved] = skills.splice(from, 1)
+      const targetIndex = skills.findIndex(skill => skill.skill_nome === targetName)
+      const rect = event.currentTarget.getBoundingClientRect()
+      const insertAfter = event.clientY > rect.top + rect.height / 2
+      skills.splice(targetIndex + (insertAfter ? 1 : 0), 0, moved)
+      saveCatalogOrder()
+      currentIndex = Math.max(0, skills.findIndex(skill => skill.skill_nome === selectedName))
+      renderList()
+    }
+
+    function endSkillDrag() {
+      draggedSkillName = null
+      document.querySelectorAll('.skill-item.drag-over, .skill-item.dragging').forEach(el => el.classList.remove('drag-over', 'dragging'))
     }
 
     function renderStats() {
