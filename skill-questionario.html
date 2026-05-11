@@ -346,6 +346,7 @@
     let definitions = new Map()
     let currentIndex = 0
     let draggedSkillName = null
+    let suppressClickUntil = 0
 
     try { sb = supabase.createClient(SUPA_URL, SUPA_KEY) } catch (e) { setGlobal('SDK Supabase non disponibile: ' + e.message, 'msg-err') }
 
@@ -754,7 +755,10 @@
     function renderList() {
       const list = filteredSkills()
       const current = skills[currentIndex]
-      document.getElementById('skill-list').innerHTML = list.map(skill => {
+      const listEl = document.getElementById('skill-list')
+      listEl.ondragover = overCatalogDrag
+      listEl.ondrop = dropCatalogDrag
+      listEl.innerHTML = list.map(skill => {
         const def = definitions.get(skill.skill_nome)
         const merged = mergedSkill(skill)
         const state = def?.stato || 'missing'
@@ -771,7 +775,7 @@
         const issueText = issues.join(' · ')
         const issueAttrs = issues.length ? ` title="${esc(issueText)}" data-issue="${esc(issueText)}"` : ''
         const skillArg = JSON.stringify(skill.skill_nome).replace(/'/g, '&#39;')
-        return `<button class="${classes}"${issueAttrs} draggable="true" data-skill="${esc(skill.skill_nome)}" onclick='selectSkill(${skillArg})' ondragstart='startSkillDrag(event, ${skillArg})' ondragover="overSkillDrag(event)" ondragleave="leaveSkillDrag(event)" ondrop='dropSkillDrag(event, ${skillArg})' ondragend="endSkillDrag()">
+        return `<button class="${classes}"${issueAttrs} draggable="true" data-skill="${esc(skill.skill_nome)}" onclick='selectSkill(${skillArg})' ondragstart='startSkillDrag(event, ${skillArg})' ondragover="overSkillDrag(event)" ondragleave="leaveSkillDrag(event)" ondrop="dropCatalogDrag(event)" ondragend="endSkillDrag()">
           <b class="skill-check ${isReviewed ? 'on' : ''}">✓</b>
           <span><strong>${esc(skill.skill_nome)}</strong><span>${esc(merged.ramo)} · ${esc(merged.fascia_livello)}</span></span>
           <i class="dot ${cls}"></i>
@@ -791,26 +795,48 @@
       if (!draggedSkillName) return
       event.preventDefault()
       event.dataTransfer.dropEffect = 'move'
-      event.currentTarget.classList.add('drag-over')
+      document.querySelectorAll('.skill-item.drag-over').forEach(el => el.classList.remove('drag-over'))
+      event.currentTarget.closest('.skill-item')?.classList.add('drag-over')
     }
 
     function leaveSkillDrag(event) {
       event.currentTarget.classList.remove('drag-over')
     }
 
-    function dropSkillDrag(event, targetName) {
+    function overCatalogDrag(event) {
+      if (!draggedSkillName) return
       event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+      document.querySelectorAll('.skill-item.drag-over').forEach(el => el.classList.remove('drag-over'))
+      const target = skillDropTarget(event)
+      if (target) target.classList.add('drag-over')
+    }
+
+    function skillDropTarget(event) {
+      const items = [...document.querySelectorAll('#skill-list .skill-item:not(.dragging)')]
+      return items.find(item => {
+        const rect = item.getBoundingClientRect()
+        return event.clientY >= rect.top && event.clientY <= rect.bottom
+      }) || null
+    }
+
+    function dropCatalogDrag(event) {
+      event.preventDefault()
+      event.stopPropagation()
       document.querySelectorAll('.skill-item.drag-over, .skill-item.dragging').forEach(el => el.classList.remove('drag-over', 'dragging'))
       const sourceName = draggedSkillName || event.dataTransfer.getData('text/plain')
+      const targetEl = event.target.closest('.skill-item') || skillDropTarget(event) || [...document.querySelectorAll('#skill-list .skill-item:not(.dragging)')].at(-1)
+      const targetName = targetEl?.dataset?.skill || null
       draggedSkillName = null
-      if (!sourceName || sourceName === targetName) return
+      suppressClickUntil = Date.now() + 350
+      if (!sourceName || !targetName || sourceName === targetName) return
       const selectedName = skills[currentIndex]?.skill_nome
       const from = skills.findIndex(skill => skill.skill_nome === sourceName)
-      const to = skills.findIndex(skill => skill.skill_nome === targetName)
-      if (from < 0 || to < 0) return
+      if (from < 0) return
       const [moved] = skills.splice(from, 1)
       const targetIndex = skills.findIndex(skill => skill.skill_nome === targetName)
-      const rect = event.currentTarget.getBoundingClientRect()
+      if (targetIndex < 0) return
+      const rect = targetEl.getBoundingClientRect()
       const insertAfter = event.clientY > rect.top + rect.height / 2
       skills.splice(targetIndex + (insertAfter ? 1 : 0), 0, moved)
       saveCatalogOrder()
@@ -1160,6 +1186,7 @@
     }
 
     function selectSkill(name) {
+      if (Date.now() < suppressClickUntil) return
       const idx = skills.findIndex(s => s.skill_nome === name)
       if (idx >= 0) currentIndex = idx
       renderQuestion()
