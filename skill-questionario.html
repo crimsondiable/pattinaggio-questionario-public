@@ -151,6 +151,8 @@
     .hint-box textarea:focus { box-shadow: none; border-color: transparent; }
     .hint-box-head { display: flex; align-items: center; justify-content: space-between; gap: .45rem; margin-bottom: .25rem; }
     .hint-box-head span { margin: 0; }
+    .alias-list { display: flex; gap: .32rem; flex-wrap: wrap; margin-top: .28rem; }
+    .alias-chip { display: inline-flex; align-items: center; min-height: 22px; padding: .12rem .42rem; border: 1px solid rgba(110,231,249,.28); border-radius: 999px; color: var(--cyan); background: rgba(110,231,249,.08); font-size: .72rem; font-weight: 800; }
     .variant-seeds { display: grid; gap: .35rem; margin-top: .28rem; }
     .variant-seed { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem; align-items: center; }
     .variant-seed strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -465,6 +467,7 @@
         cosa_fa: '',
         come_si_fa: '',
         varianti: node.variants || [],
+        alias_nomi: node.name === 'Papera statica' ? ['Open stance'] : [],
         note_revisione: '',
         stato: 'bozza',
         key: !!node.key,
@@ -485,6 +488,7 @@
         cosa_fa: '',
         come_si_fa: '',
         varianti: def.varianti || [],
+        alias_nomi: def.alias_nomi || [],
         note_revisione: def.note_revisione || '',
         stato: def.stato || 'bozza',
         key: false,
@@ -552,6 +556,7 @@
         cosa_fa: merged.cosa_fa || '',
         come_si_fa: merged.come_si_fa || '',
         varianti: merged.varianti || [],
+        alias_nomi: merged.alias_nomi || [],
         catalog_note: merged.catalog_note || '',
         note_revisione: merged.note_revisione || null,
         stato: merged.stato || 'bozza',
@@ -687,6 +692,12 @@
 
     function variantSkillName(parentName, variantName) {
       return `${parentName} - ${variantName}`
+    }
+
+    function renderAliases(items = []) {
+      const aliases = uniqueTextList(items)
+      if (!aliases.length) return ''
+      return `<div class="alias-list">${aliases.map(alias => `<span class="alias-chip">${esc(alias)}</span>`).join('')}</div>`
     }
 
     function renderVariantSeeds(skill) {
@@ -855,7 +866,11 @@
           <textarea id="field-varianti" placeholder="Una variante per riga..." oninput="renderVariantSeedPreview()">${esc((skill.varianti || []).join('\n'))}</textarea>
           <div id="variant-seed-preview">${renderVariantSeeds(skill)}</div>
         </div>
-        <div class="hint-box"><span>Prereq proposti</span><strong>${esc((skill.prerequisiti || []).join(', ') || 'Nessuno')}</strong></div>`
+        <div class="hint-box">
+          <div class="hint-box-head"><span>Alias / nomi</span></div>
+          <textarea id="field-alias-nomi" placeholder="Es. Open stance, toe stop...">${esc((skill.alias_nomi || []).join('\n'))}</textarea>
+          ${renderAliases(skill.alias_nomi || []) || '<strong>Nessuno</strong>'}
+        </div>`
       renderDefinedVariants(skill.skill_nome)
       document.getElementById('field-ramo').value = skill.ramo
       document.getElementById('field-fascia').value = skill.fascia_livello
@@ -1030,6 +1045,7 @@
         cosa_fa: '',
         come_si_fa: '',
         varianti: [],
+        alias_nomi: [],
         catalog_note: `Variante ${variantName} di ${parent.skill_nome}`,
         note_revisione: null,
         stato: 'bozza',
@@ -1078,6 +1094,7 @@
         cosa_fa: '',
         come_si_fa: '',
         varianti: splitLines(document.getElementById('field-varianti')?.value || '').length ? splitLines(document.getElementById('field-varianti').value) : (base.varianti || []),
+        alias_nomi: splitLines(document.getElementById('field-alias-nomi')?.value || ''),
         catalog_note: document.getElementById('field-catalog-note')?.value.trim() || '',
         note_revisione: document.getElementById('field-note').value.trim() || null,
         stato,
