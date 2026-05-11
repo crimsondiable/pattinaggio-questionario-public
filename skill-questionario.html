@@ -207,11 +207,11 @@
     <section class="card hero-card">
       <h1>Definizione skill, una alla volta</h1>
       <p>Ogni scheda parte gia compilata dal catalogo metodologico. Tu correggi ramo, livello didattico, prerequisiti e varianti; poi salvi nel DB dedicato per riusarle nel gestionale serio.</p>
-      <div id="auth-box" class="login">
+      <form id="auth-box" class="login" onsubmit="login(event)">
         <div class="field" style="margin:0"><label>Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="email"></div>
         <div class="field" style="margin:0"><label>Password</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="password"></div>
-        <button class="btn btn-primary" onclick="login()">Accedi</button>
-      </div>
+        <button class="btn btn-primary" type="submit">Accedi</button>
+      </form>
       <div id="session-box" class="toolbar" hidden>
         <span id="session-label" class="pill good"></span>
         <button class="btn btn-sm" onclick="logout()">Esci</button>
@@ -1088,7 +1088,8 @@
       renderQuestion()
     }
 
-    async function login() {
+    async function login(event) {
+      event?.preventDefault()
       const email = document.getElementById('auth-email').value.trim()
       const password = document.getElementById('auth-password').value
       const { data, error } = await sb.auth.signInWithPassword({ email, password })
