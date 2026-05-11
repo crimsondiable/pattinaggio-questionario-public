@@ -347,7 +347,16 @@
     let draggedSkillName = null
     let suppressClickUntil = 0
 
-    try { sb = supabase.createClient(SUPA_URL, SUPA_KEY) } catch (e) { setGlobal('SDK Supabase non disponibile: ' + e.message, 'msg-err') }
+    try {
+      sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: 'blading-questionario-auth'
+        }
+      })
+    } catch (e) { setGlobal('SDK Supabase non disponibile: ' + e.message, 'msg-err') }
 
     function esc(value) {
       return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -623,6 +632,21 @@
       }
       renderAuth()
       if (session) renderAll()
+      if (sb) {
+        sb.auth.onAuthStateChange(async (_event, authSession) => {
+          const wasLogged = !!session
+          session = authSession || null
+          if (session && !wasLogged) {
+            hydrateLocalDrafts()
+            await hydrateRemote()
+            renderAuth()
+            renderAll()
+          } else if (!session && wasLogged) {
+            definitions = new Map()
+            renderAuth()
+          }
+        })
+      }
     }
 
     async function hydrateRemote() {
