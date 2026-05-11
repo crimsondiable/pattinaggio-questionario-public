@@ -201,7 +201,7 @@
 </head>
 <body>
   <header>
-    <div class="brand">Blading Manager · Questionario Skill <small id="app-version">v2026-05-12.1</small></div>
+    <div class="brand">Blading Manager · Questionario Skill <small id="app-version">v2026-05-12.2</small></div>
     <div class="header-actions" id="header-actions" hidden>
       <button class="btn btn-sm" onclick="downloadJson()">Export JSON</button>
     </div>
@@ -240,6 +240,11 @@
             <option value="revisionata">Revisionate</option>
             <option value="da_rivedere">Da rivedere</option>
             <option value="approvata">Approvate</option>
+          </select></div>
+          <div class="field"><label>Varianti</label><select id="filter-variants" onchange="renderList()">
+            <option value="">Tutte</option>
+            <option value="hide">Nascondi</option>
+            <option value="only">Solo varianti</option>
           </select></div>
         </div>
         <div class="progress-line">
@@ -317,6 +322,7 @@
             <button class="btn btn-primary" onclick="saveDefinition('revisionata')">Salva revisionata</button>
             <button class="btn" onclick="saveDefinition('bozza')">Salva bozza</button>
             <button class="btn" onclick="saveDefinition('da_rivedere')">Segna da rivedere</button>
+            <button class="btn btn-danger" id="delete-variant-btn" onclick="deleteCurrentVariant()" hidden>Cancella variante</button>
             <button class="btn" onclick="nextSkill()">Avanti</button>
           </div>
         </div>
@@ -330,7 +336,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="./skilltree-catalog.js?v=202605121045"></script>
+  <script src="./skilltree-catalog.js?v=202605121130"></script>
   <script>
     const SUPA_URL = 'https://mhioneawefsvagbccsum.supabase.co'
     const SUPA_KEY = 'sb_publishable_SGGdSVxCEAXLgMGAjRksMQ_PbIvMIuH'
@@ -697,6 +703,11 @@
         .sort((a, b) => String(a.skill_nome).localeCompare(String(b.skill_nome)))
     }
 
+    function isManualVariantSkill(base, skill = null) {
+      const def = skill || (base ? mergedSkill(base) : null)
+      return !!(base?.dynamic && def?.e_variante)
+    }
+
     function findSkillByName(skillName) {
       const target = normalizeName(skillName)
       if (!target) return null
@@ -764,6 +775,7 @@
       const q = document.getElementById('search').value.trim().toLowerCase()
       const branch = document.getElementById('filter-branch').value
       const state = document.getElementById('filter-state').value
+      const variantFilter = document.getElementById('filter-variants')?.value || ''
       return skills.filter(skill => {
         const def = definitions.get(skill.skill_nome)
         const merged = mergedSkill(skill)
@@ -771,6 +783,8 @@
         if (branch && merged.ramo !== branch) return false
         if (state === 'missing' && def) return false
         if (state && state !== 'missing' && merged.stato !== state) return false
+        if (variantFilter === 'hide' && merged.e_variante) return false
+        if (variantFilter === 'only' && !merged.e_variante) return false
         return true
       })
     }
@@ -929,6 +943,8 @@
       document.getElementById('field-variante-di').value = skill.variante_di || ''
       toggleVariantPanel(false)
       document.getElementById('field-note').value = skill.note_revisione || ''
+      const deleteBtn = document.getElementById('delete-variant-btn')
+      if (deleteBtn) deleteBtn.hidden = !isManualVariantSkill(base, skill)
       renderPrereqSuggestions()
       renderUnlockSuggestions()
       setSave('')
@@ -1123,6 +1139,69 @@
         }
       }
       selectSkill(name)
+    }
+
+    function deleteLocalDraft(skillName) {
+      const local = loadLocalDrafts()
+      local.delete(skillName)
+      localStorage.setItem(localKey, JSON.stringify([...local.values()]))
+    }
+
+    function parentPayloadWithoutUnlock(parentName, childName) {
+      const parent = baseDefinitionForSkillName(parentName)
+      if (!parent) return null
+      const target = normalizeName(childName)
+      parent.sblocca = uniqueTextList((parent.sblocca || []).filter(name => normalizeName(name) !== target))
+      parent.sblocca_match = uniqueMatchList((parent.sblocca_match || []).filter(match => normalizeName(match.skill_nome || match.testo) !== target))
+      return parent
+    }
+
+    async function deleteCurrentVariant() {
+      const base = skills[currentIndex]
+      const skill = base ? mergedSkill(base) : null
+      if (!isManualVariantSkill(base, skill)) {
+        setSave('Posso cancellare solo varianti create manualmente dal questionario.', 'msg-info')
+        return
+      }
+      if (!confirm(`Cancellare la variante "${skill.skill_nome}" dal questionario?`)) return
+      const parentName = normalizedMotherName(skill)
+      const parentPayload = parentName ? parentPayloadWithoutUnlock(parentName, skill.skill_nome) : null
+      let finalMessage = `Variante "${skill.skill_nome}" cancellata localmente.`
+      let finalKind = 'msg-info'
+      if (sb && session) {
+        const { error: deleteError } = await sb.from('skill_definizioni').delete().eq('skill_nome', skill.skill_nome)
+        if (deleteError) {
+          setSave('Cancellazione non completata: ' + deleteError.message, 'msg-err')
+          return
+        }
+        if (parentPayload) {
+          const { data, error: parentError } = await sb.from('skill_definizioni').upsert(parentPayload, { onConflict: 'skill_nome' }).select()
+          if (parentError) {
+            definitions.set(parentPayload.skill_nome, parentPayload)
+            saveLocalDraft(parentPayload)
+            finalMessage = 'Variante cancellata. Aggiornamento della skill madre salvato localmente: ' + parentError.message
+            finalKind = 'msg-info'
+          } else {
+            ;(data || []).forEach(def => definitions.set(def.skill_nome, def))
+            finalMessage = `Variante "${skill.skill_nome}" cancellata dal DB.`
+            finalKind = 'msg-ok'
+          }
+        } else {
+          finalMessage = `Variante "${skill.skill_nome}" cancellata dal DB.`
+          finalKind = 'msg-ok'
+        }
+      } else if (parentPayload) {
+        saveLocalDraft(parentPayload)
+      }
+      definitions.delete(skill.skill_nome)
+      deleteLocalDraft(skill.skill_nome)
+      const oldIndex = currentIndex
+      skills = skills.filter(item => normalizeName(item.skill_nome) !== normalizeName(skill.skill_nome))
+      saveCatalogOrder()
+      const parentIndex = parentName ? skills.findIndex(item => normalizeName(item.skill_nome) === normalizeName(parentName)) : -1
+      currentIndex = parentIndex >= 0 ? parentIndex : Math.min(oldIndex, Math.max(0, skills.length - 1))
+      renderAll()
+      setSave(finalMessage, finalKind)
     }
 
     function collectDefinition(stato) {
