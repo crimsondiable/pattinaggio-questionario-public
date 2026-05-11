@@ -136,11 +136,21 @@
     .pill { display: inline-flex; align-items: center; min-height: 24px; padding: .15rem .48rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: .74rem; font-weight: 750; }
     .pill.good { color: var(--green); border-color: rgba(125,211,168,.38); background: rgba(125,211,168,.08); }
     .pill.warn { color: var(--amber); border-color: rgba(250,204,21,.34); background: rgba(250,204,21,.08); }
-    .skill-title { font-size: 1.55rem; line-height: 1.12; margin-bottom: .5rem; }
+    .skill-flow { display: grid; gap: .22rem; justify-items: center; text-align: center; margin: .7rem 0 .85rem; }
+    .skill-title { font-size: 1.68rem; line-height: 1.12; margin: 0; text-align: center; }
+    .flow-side { max-width: 760px; color: var(--muted); font-size: .78rem; font-weight: 750; line-height: 1.35; }
+    .flow-side span { color: var(--cyan); }
     .hint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .58rem; margin: .85rem 0; }
     .hint-box { border: 1px solid rgba(190,242,255,.14); border-radius: var(--r); background: rgba(255,255,255,.035); padding: .62rem; min-height: 72px; }
     .hint-box span { display: block; color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem; }
     .hint-box strong { display: block; font-size: .84rem; line-height: 1.32; }
+    .hint-box textarea { min-height: 56px; margin-top: .3rem; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-weight: 800; line-height: 1.32; }
+    .hint-box textarea:focus { box-shadow: none; border-color: transparent; }
+    .hint-box-head { display: flex; align-items: center; justify-content: space-between; gap: .45rem; margin-bottom: .25rem; }
+    .hint-box-head span { margin: 0; }
+    .variant-seeds { display: grid; gap: .35rem; margin-top: .28rem; }
+    .variant-seed { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem; align-items: center; }
+    .variant-seed strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .variant-list { display: grid; gap: .42rem; margin: .2rem 0 .85rem; }
     .variant-chip {
       display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .58rem; align-items: center;
@@ -180,7 +190,7 @@
       .side { position: static; max-height: none; }
       .grid2, .hint-grid, .stats, .login { grid-template-columns: 1fr; }
       .header-actions { margin-left: 0; }
-      .skill-title { font-size: 1.28rem; }
+      .skill-title { font-size: 1.32rem; }
     }
   </style>
 </head>
@@ -205,7 +215,6 @@
       <div id="session-box" class="toolbar" hidden>
         <span id="session-label" class="pill good"></span>
         <button class="btn btn-sm" onclick="logout()">Esci</button>
-        <button class="btn btn-sm btn-primary" onclick="syncAllDrafts()">Sincronizza bozze locali</button>
       </div>
       <div id="global-msg" class="msg"></div>
       <div id="locked-box">
@@ -240,7 +249,11 @@
         <div id="question-empty" class="empty" hidden>Nessuna skill selezionata.</div>
         <div id="question-form">
           <div class="kicker" id="skill-kicker"></div>
-          <h2 class="skill-title" id="skill-title"></h2>
+          <div class="skill-flow" id="skill-flow">
+            <div class="flow-side" id="skill-prev"></div>
+            <h2 class="skill-title" id="skill-title"></h2>
+            <div class="flow-side" id="skill-next"></div>
+          </div>
           <div class="hint-grid" id="hint-grid"></div>
           <div id="defined-variants"></div>
 
@@ -387,6 +400,7 @@
         skill_id: match?.skill_id || null,
         ramo: match?.ramo || null,
         livello_num: match?.livello_num || null,
+        fascia_livello: match?.fascia_livello || null,
         score: match?.score || 0,
         exact: !!match?.exact
       }
@@ -431,6 +445,27 @@
         stato: 'bozza',
         key: !!node.key,
         catalog_note: node.note || ''
+      }
+    }
+
+    function definitionAsSkill(def) {
+      return {
+        local_id: `definition-${def.id || normalizeName(def.skill_nome)}`,
+        skill_id: def.skill_id || null,
+        skill_nome: def.skill_nome,
+        ramo: def.ramo || 'Extra',
+        fascia_livello: def.fascia_livello || 'Base',
+        livello_num: def.livello_num || null,
+        prerequisiti: def.prerequisiti || [],
+        sblocca: def.sblocca || [],
+        cosa_fa: '',
+        come_si_fa: '',
+        varianti: def.varianti || [],
+        note_revisione: def.note_revisione || '',
+        stato: def.stato || 'bozza',
+        key: false,
+        catalog_note: def.catalog_note || '',
+        dynamic: true
       }
     }
 
@@ -493,6 +528,7 @@
         cosa_fa: merged.cosa_fa || '',
         come_si_fa: merged.come_si_fa || '',
         varianti: merged.varianti || [],
+        catalog_note: merged.catalog_note || '',
         note_revisione: merged.note_revisione || null,
         stato: merged.stato || 'bozza',
         maestro_id: session?.user?.id || merged.maestro_id || null,
@@ -507,6 +543,7 @@
         skill_id: payload.skill_id || null,
         ramo: payload.ramo || null,
         livello_num: payload.livello_num || null,
+        fascia_livello: payload.fascia_livello || null,
         score: 100,
         exact: true
       }
@@ -570,6 +607,13 @@
       const idByName = new Map((remoteSkills || []).map(s => [String(s.nome).toLowerCase(), s.id]))
       skills = skills.map(s => ({ ...s, skill_id: idByName.get(s.skill_nome.toLowerCase()) || s.skill_id }))
       ;(remoteDefs || []).forEach(def => definitions.set(def.skill_nome, def))
+      const known = new Set(skills.map(skill => normalizeName(skill.skill_nome)))
+      ;(remoteDefs || []).forEach(def => {
+        const key = normalizeName(def.skill_nome)
+        if (!key || known.has(key)) return
+        skills.push(definitionAsSkill(def))
+        known.add(key)
+      })
     }
 
     function renderAuth() {
@@ -606,6 +650,31 @@
 
     function matchedNames(rows = []) {
       return rows.map(row => row?.skill_nome || row?.testo).filter(Boolean)
+    }
+
+    function flowText(items = [], emptyText) {
+      const list = uniqueTextList(items).slice(0, 4)
+      if (!list.length) return emptyText
+      const extra = uniqueTextList(items).length - list.length
+      return `${list.join(' · ')}${extra > 0 ? ` · +${extra}` : ''}`
+    }
+
+    function variantSkillName(parentName, variantName) {
+      return `${parentName} - ${variantName}`
+    }
+
+    function renderVariantSeeds(skill) {
+      const variants = uniqueTextList(skill.varianti || [])
+      if (!variants.length) return '<strong>Nessuna</strong>'
+      return `<div class="variant-seeds">${variants.map(variant => {
+        const name = variantSkillName(skill.skill_nome, variant)
+        const exists = !!findSkillByName(name) || !!definitions.get(name)
+        const variantArg = JSON.stringify(variant).replace(/"/g, '&quot;')
+        return `<div class="variant-seed">
+          <strong>${esc(variant)}</strong>
+          <button class="btn btn-sm" type="button" onclick="createVariantSkill(${variantArg})" ${exists ? 'disabled' : ''}>${exists ? 'Creata' : '+ Skill'}</button>
+        </div>`
+      }).join('')}</div>`
     }
 
     function hasRequirementLinks(skill) {
@@ -703,10 +772,19 @@
         <span class="pill">${esc(branchTone[skill.ramo] || 'Skill')}</span>
         <span class="pill ${base.key ? 'good' : 'warn'}">${base.key ? 'Chiave' : 'Opzionale'}</span>
         <span class="pill">${esc(skill.stato || 'bozza')}</span>`
+      document.getElementById('skill-prev').innerHTML = `Prerequisito: <span>${esc(flowText(matchedNames(skill.prerequisiti_match).length ? matchedNames(skill.prerequisiti_match) : skill.prerequisiti, 'nessuno'))}</span>`
       document.getElementById('skill-title').textContent = skill.skill_nome
+      document.getElementById('skill-next').innerHTML = `Sblocca: <span>${esc(flowText(matchedNames(skill.sblocca_match).length ? matchedNames(skill.sblocca_match) : skill.sblocca, 'da definire'))}</span>`
       document.getElementById('hint-grid').innerHTML = `
-        <div class="hint-box"><span>Catalogo</span><strong>${esc(base.catalog_note || 'Nessuna nota')}</strong></div>
-        <div class="hint-box"><span>Varianti</span><strong>${esc((skill.varianti || []).join(', ') || 'Nessuna')}</strong></div>
+        <div class="hint-box">
+          <div class="hint-box-head"><span>Catalogo</span></div>
+          <textarea id="field-catalog-note" placeholder="Nota catalogo...">${esc(skill.catalog_note || base.catalog_note || '')}</textarea>
+        </div>
+        <div class="hint-box">
+          <div class="hint-box-head"><span>Varianti</span><button class="btn btn-sm" type="button" onclick="addVariantLine()">Aggiungi</button></div>
+          <textarea id="field-varianti" placeholder="Una variante per riga..." oninput="renderVariantSeedPreview()">${esc((skill.varianti || []).join('\n'))}</textarea>
+          <div id="variant-seed-preview">${renderVariantSeeds(skill)}</div>
+        </div>
         <div class="hint-box"><span>Prereq proposti</span><strong>${esc((skill.prerequisiti || []).join(', ') || 'Nessuno')}</strong></div>`
       renderDefinedVariants(skill.skill_nome)
       document.getElementById('field-ramo').value = skill.ramo
@@ -839,6 +917,79 @@
       renderVariantSuggestion()
     }
 
+    function addVariantLine() {
+      const field = document.getElementById('field-varianti')
+      if (!field) return
+      field.value = `${field.value.trim()}${field.value.trim() ? '\n' : ''}`
+      field.focus()
+      renderVariantSeedPreview()
+    }
+
+    function renderVariantSeedPreview() {
+      const base = skills[currentIndex]
+      if (!base) return
+      const box = document.getElementById('variant-seed-preview')
+      if (!box) return
+      box.innerHTML = renderVariantSeeds({ ...mergedSkill(base), varianti: splitLines(document.getElementById('field-varianti')?.value || '') })
+    }
+
+    async function createVariantSkill(variantName) {
+      const base = skills[currentIndex]
+      if (!base) return
+      const parent = collectDefinition('bozza')
+      const name = variantSkillName(parent.skill_nome, variantName)
+      const existing = findSkillByName(name)
+      if (existing) {
+        selectSkill(existing.skill_nome)
+        return
+      }
+      const parentMatch = selfMatchPayload(parent)
+      const draft = {
+        skill_id: null,
+        skill_nome: name,
+        ramo: parent.ramo,
+        fascia_livello: parent.fascia_livello,
+        livello_num: parent.livello_num,
+        prerequisiti: [parent.skill_nome],
+        prerequisiti_match: [parentMatch],
+        sblocca: [],
+        sblocca_match: [],
+        e_variante: true,
+        variante_di: parent.skill_nome,
+        variante_match: parentMatch,
+        cosa_fa: '',
+        come_si_fa: '',
+        varianti: [],
+        catalog_note: `Variante ${variantName} di ${parent.skill_nome}`,
+        note_revisione: null,
+        stato: 'bozza',
+        maestro_id: session?.user?.id || null,
+        revisionato_il: null
+      }
+      if (!findSkillByName(name)) skills.push(definitionAsSkill(draft))
+      const draftMatch = selfMatchPayload(draft)
+      const parentPayload = {
+        ...parent,
+        sblocca: uniqueTextList([...(parent.sblocca || []), draft.skill_nome]),
+        sblocca_match: uniqueMatchList([...(parent.sblocca_match || []), draftMatch])
+      }
+      const payloads = [parentPayload, draft]
+      if (!sb || !session) {
+        saveDefinitionSetLocal(payloads)
+        setSave(`Creata localmente la skill variante "${name}".`, 'msg-info')
+      } else {
+        const { data, error } = await sb.from('skill_definizioni').upsert(payloads, { onConflict: 'skill_nome' }).select()
+        if (error) {
+          saveDefinitionSetLocal(payloads.map(p => ({ ...p, errore_remoto: error.message })))
+          setSave('Variante salvata in locale: ' + error.message, 'msg-err')
+        } else {
+          ;(data || []).forEach(def => definitions.set(def.skill_nome, def))
+          setSave(`Creata nel DB la skill variante "${name}".`, 'msg-ok')
+        }
+      }
+      selectSkill(name)
+    }
+
     function collectDefinition(stato) {
       const base = skills[currentIndex]
       return {
@@ -856,7 +1007,8 @@
         variante_match: buildVariantMatch(),
         cosa_fa: '',
         come_si_fa: '',
-        varianti: base.varianti || [],
+        varianti: splitLines(document.getElementById('field-varianti')?.value || '').length ? splitLines(document.getElementById('field-varianti').value) : (base.varianti || []),
+        catalog_note: document.getElementById('field-catalog-note')?.value.trim() || '',
         note_revisione: document.getElementById('field-note').value.trim() || null,
         stato,
         maestro_id: session?.user?.id || null,
