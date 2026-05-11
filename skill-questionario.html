@@ -330,7 +330,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="./skilltree-catalog.js?v=202605121020"></script>
+  <script src="./skilltree-catalog.js?v=202605121045"></script>
   <script>
     const SUPA_URL = 'https://mhioneawefsvagbccsum.supabase.co'
     const SUPA_KEY = 'sb_publishable_SGGdSVxCEAXLgMGAjRksMQ_PbIvMIuH'
@@ -476,7 +476,7 @@
         cosa_fa: '',
         come_si_fa: '',
         varianti: node.variants || [],
-        alias_nomi: node.name === 'Papera statica' ? ['Open stance'] : [],
+        alias_nomi: node.name === 'Papera statica' ? ['Open stance'] : (node.name === 'Eagle glide' ? ['Open stance glide'] : []),
         note_revisione: '',
         stato: 'bozza',
         key: !!node.key,
