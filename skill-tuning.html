@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tuning Skill | Skill Lab Pattinaggio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --cyan: #6ee7f9;
+      --green: #7dd3a8;
+      --amber: #facc15;
+      --rose: #fb7185;
+      --text: #eef7fb;
+      --muted: #8fa4ad;
+      --border: rgba(190,242,255,.22);
+      --bg: #081116;
+      --panel: rgba(16,27,34,.78);
+      --soft: rgba(255,255,255,.055);
+      --r: 8px;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #0b151b 0%, var(--bg) 48%);
+    }
+    header { position: sticky; top: 0; z-index: 10; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .7rem 1rem; border-bottom: 1px solid var(--border); background: rgba(8,17,22,.92); }
+    .brand { font-weight: 800; }
+    .actions { margin-left: auto; display: flex; gap: .45rem; flex-wrap: wrap; }
+    main { width: min(900px, 100%); margin: 0 auto; padding: 1rem; }
+    .card { border: 1px solid var(--border); border-radius: var(--r); background: var(--panel); padding: 1rem; box-shadow: 0 22px 64px rgba(0,0,0,.32); }
+    .grid { display: grid; gap: .75rem; }
+    .login { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: end; }
+    label { display: block; margin-bottom: .25rem; color: var(--muted); font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    input, select, textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--r); background: rgba(8,17,22,.72); color: var(--text); padding: .55rem .65rem; font: inherit; }
+    textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
+    .btn { min-height: 34px; padding: .48rem .78rem; border: 1px solid var(--border); border-radius: var(--r); color: var(--text); background: var(--soft); font-weight: 800; cursor: pointer; }
+    .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .btn-primary { color: #041015; border-color: rgba(190,242,255,.28); background: linear-gradient(135deg, rgba(34,184,207,.94), rgba(110,231,249,.9)); }
+    .btn-primary:hover { color: #041015; }
+    .toolbar { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+    .chip-on { border-color: var(--cyan); color: var(--cyan); background: rgba(110,231,249,.1); }
+    .pill { display: inline-flex; min-height: 24px; align-items: center; padding: .16rem .5rem; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .75rem; font-weight: 800; }
+    .title { margin: .65rem 0 .35rem; font-size: 1.45rem; line-height: 1.15; }
+    .muted { color: var(--muted); line-height: 1.45; }
+    .choices { display: flex; gap: .45rem; flex-wrap: wrap; margin: .7rem 0; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+    .stat { border: 1px solid rgba(190,242,255,.14); border-radius: var(--r); padding: .65rem; background: rgba(255,255,255,.035); }
+    .stat strong { display: block; font-size: 1.2rem; }
+    .stat span { display: block; color: var(--muted); font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .msg { display: none; margin-top: .75rem; padding: .58rem .7rem; border: 1px solid var(--border); border-radius: var(--r); font-size: .86rem; }
+    .msg.show { display: block; }
+    .msg-ok { color: var(--green); border-color: rgba(125,211,168,.28); background: rgba(125,211,168,.1); }
+    .msg-info { color: var(--cyan); border-color: rgba(110,231,249,.28); background: rgba(110,231,249,.1); }
+    .msg-err { color: var(--rose); border-color: rgba(251,113,133,.28); background: rgba(251,113,133,.1); }
+    [hidden] { display: none !important; }
+    @media (max-width: 720px) { .login, .stats { grid-template-columns: 1fr; } .actions { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Skill Lab · Tuning</div>
+    <div class="actions" id="actions" hidden>
+      <a class="btn" href="./skill-questionario.html">Questionario</a>
+      <button class="btn" onclick="downloadLocal()">Export fallback</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h1>Tuning metodologia</h1>
+      <p class="muted">Accedi per caricare le skill dal DB e salvare risposte di tuning online.</p>
+      <div id="auth-box" class="login">
+        <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+        <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+        <button class="btn btn-primary" onclick="login()">Accedi</button>
+      </div>
+      <div id="session-box" class="toolbar" hidden>
+        <span id="session-label" class="pill"></span>
+        <button class="btn" onclick="logout()">Esci</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </section>
+
+    <section id="app" class="card grid" hidden>
+      <div class="toolbar">
+        <button class="btn chip-on" id="mode-parametri" onclick="setMode('parametri')">Parametri</button>
+        <button class="btn" id="mode-requisiti" onclick="setMode('requisiti')">Requisiti</button>
+        <button class="btn" id="mode-progressione" onclick="setMode('progressione')">Progressione</button>
+        <button class="btn" id="mode-livelli" onclick="setMode('livelli')">Livelli</button>
+        <select id="scope" onchange="nextCard()">
+          <option value="">Tutti i rami</option>
+          <option>Equilibrio</option>
+          <option>Andatura</option>
+          <option>Frenata</option>
+          <option>Rotazione</option>
+        </select>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="count">0</strong><span>Sessione</span></div>
+        <div class="stat"><strong id="alerts">0</strong><span>Avvisi</span></div>
+        <div class="stat"><strong id="fallback">0</strong><span>Fallback locale</span></div>
+      </div>
+      <div id="card"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SUPA_URL = 'https://mhioneawefsvagbccsum.supabase.co'
+    const SUPA_KEY = 'sb_publishable_SGGdSVxCEAXLgMGAjRksMQ_PbIvMIuH'
+    const sb = supabase.createClient(SUPA_URL, SUPA_KEY)
+    let session = null
+    let skills = []
+    let mode = 'parametri'
+    let card = null
+    let count = 0
+    let alerts = 0
+    let local = JSON.parse(localStorage.getItem('skillTuningFallback') || '[]')
+
+    const parametri = [
+      ['attr_baricentro', 'Quanto pesa il controllo del baricentro?'],
+      ['attr_forze', 'Quanto pesa la gestione delle forze?'],
+      ['attr_assi', 'Quanto pesa il controllo degli assi?'],
+      ['attr_tempo', 'Quanto pesa il timing?']
+    ]
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    }
+
+    function setMsg(text, kind = 'msg-info') {
+      const el = document.getElementById('msg')
+      el.className = `msg ${kind} ${text ? 'show' : ''}`
+      el.textContent = text || ''
+    }
+
+    function renderAuth() {
+      const logged = !!session
+      document.getElementById('auth-box').hidden = logged
+      document.getElementById('session-box').hidden = !logged
+      document.getElementById('actions').hidden = !logged
+      document.getElementById('app').hidden = !logged
+      document.getElementById('session-label').textContent = logged ? session.user.email : ''
+    }
+
+    async function boot() {
+      const { data } = await sb.auth.getSession()
+      session = data?.session || null
+      renderAuth()
+      if (session) await loadSkills()
+    }
+
+    async function loadSkills() {
+      const { data, error } = await sb.from('skills').select('id,nome,ramo,livello,blocco,tipo,obbligatoria,attr_baricentro,attr_forze,attr_assi,attr_tempo').order('livello')
+      if (error) {
+        setMsg('Impossibile caricare le skill: ' + error.message, 'msg-err')
+        return
+      }
+      skills = data || []
+      renderStats()
+      nextCard()
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value.trim()
+      const password = document.getElementById('password').value
+      const { data, error } = await sb.auth.signInWithPassword({ email, password })
+      if (error) {
+        setMsg('Login non riuscito: ' + error.message, 'msg-err')
+        return
+      }
+      session = data.session
+      renderAuth()
+      await loadSkills()
+      setMsg('Accesso effettuato.', 'msg-ok')
+    }
+
+    async function logout() {
+      await sb.auth.signOut()
+      session = null
+      skills = []
+      card = null
+      renderAuth()
+      setMsg('Sessione chiusa.', 'msg-info')
+    }
+
+    function setMode(next) {
+      mode = next
+      ;['parametri','requisiti','progressione','livelli'].forEach(m => {
+        document.getElementById(`mode-${m}`).classList.toggle('chip-on', m === mode)
+      })
+      nextCard()
+    }
+
+    function scopedSkills() {
+      const scope = document.getElementById('scope').value
+      return skills.filter(s => !scope || s.ramo === scope)
+    }
+
+    function pickSkill(excludeId = null) {
+      const list = scopedSkills().filter(s => s.id !== excludeId)
+      return list[Math.floor(Math.random() * list.length)] || null
+    }
+
+    function nextCard() {
+      const skill = pickSkill()
+      if (!skill) {
+        document.getElementById('card').innerHTML = '<p class="muted">Nessuna skill disponibile.</p>'
+        return
+      }
+      const ref = mode === 'progressione' ? pickSkill(skill.id) : null
+      const parametro = mode === 'parametri' ? parametri[Math.floor(Math.random() * parametri.length)] : null
+      const titles = {
+        parametri: parametro?.[1],
+        requisiti: `I prerequisiti di "${skill.nome}" sono sensati?`,
+        progressione: `"${skill.nome}" puo stare prima di "${ref?.nome || 'una skill successiva'}"?`,
+        livelli: `"${skill.nome}" e nel livello didattico giusto?`
+      }
+      card = {
+        tipo: mode,
+        skill,
+        refSkill: ref,
+        parametro: parametro?.[0] || null,
+        title: titles[mode],
+        value: null,
+        outcome: null,
+        note: ''
+      }
+      renderCard()
+    }
+
+    function renderCard() {
+      const valueChoices = [1,2,3,4,5].map(v => `<button class="btn ${card.value === v ? 'chip-on' : ''}" onclick="setValue(${v})">${v}</button>`).join('')
+      const outcomeChoices = [
+        ['ok', 'Ok'],
+        ['rivedere', 'Da rivedere'],
+        ['spostare_prima', 'Prima'],
+        ['spostare_dopo', 'Dopo'],
+        ['manca_requisito', 'Manca requisito']
+      ].map(([v, label]) => `<button class="btn ${card.outcome === v ? 'chip-on' : ''}" onclick="setOutcome('${v}')">${label}</button>`).join('')
+      document.getElementById('card').innerHTML = `
+        <div class="toolbar">
+          <span class="pill">${esc(card.tipo)}</span>
+          <span class="pill">${esc(card.skill.ramo || 'Extra')}</span>
+          <span class="pill">${esc(card.skill.blocco || '')} · Lv.${esc(card.skill.livello || '')}</span>
+        </div>
+        <h2 class="title">${esc(card.title)}</h2>
+        <p class="muted">Skill: ${esc(card.skill.nome)}${card.refSkill ? ` · Riferimento: ${esc(card.refSkill.nome)}` : ''}</p>
+        <div class="choices">${card.tipo === 'parametri' ? valueChoices : outcomeChoices}</div>
+        <label>Note</label>
+        <textarea id="note" placeholder="Motivo, dubbio, proposta..." oninput="card.note=this.value">${esc(card.note || '')}</textarea>
+        <div class="toolbar" style="margin-top:.75rem">
+          <button class="btn btn-primary" onclick="saveAnswer()">Salva risposta</button>
+          <button class="btn" onclick="saveAlert()">Salva avviso</button>
+          <button class="btn" onclick="nextCard()">Salta</button>
+        </div>`
+    }
+
+    function setValue(value) {
+      card.value = value
+      renderCard()
+    }
+
+    function setOutcome(value) {
+      card.outcome = value
+      renderCard()
+    }
+
+    function payload(avviso = false) {
+      return {
+        tipo: card.tipo,
+        skill_id: card.skill?.id || null,
+        skill_ref_id: card.refSkill?.id || null,
+        variante: card.skill?.nome || null,
+        parametro: card.parametro || null,
+        valore: avviso ? null : (card.value || null),
+        esito: avviso ? 'avviso' : (card.outcome || null),
+        note: document.getElementById('note')?.value?.trim() || null,
+        payload: {
+          skill_nome: card.skill?.nome || null,
+          skill_ref_nome: card.refSkill?.nome || null,
+          ramo: card.skill?.ramo || null,
+          livello: card.skill?.livello || null,
+          blocco: card.skill?.blocco || null,
+          origine: 'questionario-public'
+        },
+        maestro_id: session?.user?.id || null
+      }
+    }
+
+    async function persist(item) {
+      const { error } = await sb.from('tuning_risposte').insert(item)
+      if (error) {
+        local.push({ ...item, errore_remoto: error.message, salvato_locale_il: new Date().toISOString() })
+        localStorage.setItem('skillTuningFallback', JSON.stringify(local))
+        setMsg('Salvato in fallback locale: ' + error.message, 'msg-err')
+      } else {
+        setMsg('Risposta salvata nel DB.', 'msg-ok')
+      }
+      renderStats()
+    }
+
+    async function saveAnswer() {
+      if (!card) return
+      if (card.tipo === 'parametri' && !card.value) {
+        setMsg('Seleziona un valore 1-5.', 'msg-info')
+        return
+      }
+      if (card.tipo !== 'parametri' && !card.outcome) {
+        setMsg('Seleziona un esito.', 'msg-info')
+        return
+      }
+      await persist(payload(false))
+      count += 1
+      renderStats()
+      nextCard()
+    }
+
+    async function saveAlert() {
+      if (!document.getElementById('note')?.value?.trim()) {
+        setMsg('Scrivi una nota per salvare un avviso.', 'msg-info')
+        return
+      }
+      await persist(payload(true))
+      alerts += 1
+      renderStats()
+      nextCard()
+    }
+
+    function renderStats() {
+      document.getElementById('count').textContent = count
+      document.getElementById('alerts').textContent = alerts
+      document.getElementById('fallback').textContent = local.length
+    }
+
+    function downloadLocal() {
+      const blob = new Blob([JSON.stringify(local, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `tuning-fallback-${new Date().toISOString().slice(0,10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    boot()
+  </script>
+</body>
+</html>

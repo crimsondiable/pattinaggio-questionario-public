@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questionario Skill | Blading Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cyan: #6ee7f9;
+      --cyan-dark: #22b8cf;
+      --green: #7dd3a8;
+      --amber: #facc15;
+      --rose: #fb7185;
+      --text: #eef7fb;
+      --muted: #8fa4ad;
+      --border: rgba(190,242,255,.22);
+      --bg: #081116;
+      --panel: rgba(16,27,34,.72);
+      --panel-solid: #13242c;
+      --soft: rgba(255,255,255,.055);
+      --r: 8px;
+      --shadow: 0 22px 64px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    body {
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% -10%, rgba(34,184,207,.16), transparent 34rem),
+        linear-gradient(180deg, #0b151b 0%, var(--bg) 46%);
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      padding: .6rem 1rem;
+      background: rgba(8,17,22,.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+    }
+    .brand { font-weight: 750; letter-spacing: .01em; }
+    .header-actions { margin-left: auto; display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+    main { width: min(1180px, 100%); margin: 0 auto; padding: 1rem; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+      min-height: 34px; padding: .42rem .78rem;
+      border: 1px solid var(--border); border-radius: var(--r);
+      color: var(--text); background: rgba(255,255,255,.06);
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s, transform .1s;
+    }
+    .btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(110,231,249,.1); }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: linear-gradient(135deg, rgba(34,184,207,.94), rgba(110,231,249,.9)); color: #041015; border-color: rgba(190,242,255,.28); }
+    .btn-primary:hover { color: #041015; }
+    .btn-danger { color: var(--rose); }
+    .btn-sm { min-height: 30px; padding: .32rem .62rem; font-size: .76rem; }
+    .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 1rem; align-items: start; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+    .panel { padding: .85rem; }
+    .side { position: sticky; top: 62px; max-height: calc(100vh - 78px); overflow: auto; }
+    h1 { font-size: 1.35rem; line-height: 1.15; margin-bottom: .25rem; }
+    h2 { font-size: .94rem; margin-bottom: .65rem; }
+    p { color: var(--muted); line-height: 1.45; font-size: .9rem; }
+    label { display: block; font-size: .75rem; font-weight: 750; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .28rem; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      background: rgba(8,17,22,.72);
+      color: var(--text);
+      padding: .5rem .62rem;
+      font: inherit;
+      font-size: .88rem;
+    }
+    textarea { min-height: 104px; resize: vertical; line-height: 1.45; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(110,231,249,.12); }
+    .field { margin-bottom: .72rem; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .72rem; }
+    .toolbar { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; margin-top: .8rem; }
+    .progress-line { display: grid; grid-template-columns: 1fr auto; gap: .75rem; align-items: center; margin: .8rem 0 1rem; color: var(--muted); font-size: .82rem; }
+    .bar { height: 8px; border: 1px solid rgba(148,163,184,.14); border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.06); }
+    .bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan-dark), var(--cyan)); }
+    .skill-list { display: grid; gap: .36rem; margin-top: .75rem; }
+    .skill-item {
+      position: relative;
+      display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: .45rem; align-items: center;
+      padding: .5rem .56rem; border: 1px solid rgba(190,242,255,.12); border-radius: var(--r);
+      background: rgba(255,255,255,.035); cursor: pointer;
+    }
+    .skill-item:hover, .skill-item.active { border-color: var(--cyan); background: rgba(110,231,249,.1); }
+    .skill-item.is-variant { border-style: dashed; }
+    .skill-item.has-links { box-shadow: 0 0 0 1px rgba(110,231,249,.18), 0 0 18px rgba(110,231,249,.16); }
+    .skill-item.has-issues { border-color: rgba(251,113,133,.62); box-shadow: 0 0 0 1px rgba(251,113,133,.2), 0 0 20px rgba(251,113,133,.34); }
+    .skill-item.has-issues:hover,
+    .skill-item.has-issues:focus-visible { z-index: 50; }
+    .skill-item.has-issues::after {
+      content: attr(data-issue);
+      position: absolute;
+      left: .5rem;
+      right: .5rem;
+      top: calc(100% + 6px);
+      z-index: 40;
+      display: none;
+      padding: .55rem .65rem;
+      border: 1px solid rgba(251,113,133,.45);
+      border-radius: var(--r);
+      color: var(--text);
+      background: #1d1117;
+      box-shadow: 0 18px 48px rgba(0,0,0,.36);
+      font-size: .76rem;
+      line-height: 1.35;
+      text-align: left;
+      white-space: normal;
+      pointer-events: none;
+    }
+    .skill-item.has-issues:hover::after,
+    .skill-item.has-issues:focus-visible::after { display: block; }
+    .skill-item strong { display: block; min-width: 0; font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .skill-item span { color: var(--muted); font-size: .72rem; }
+    .skill-check { color: transparent; font-size: .9rem; font-weight: 900; line-height: 1; }
+    .skill-check.on { color: var(--green); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); }
+    .dot.saved { background: var(--green); border-color: var(--green); }
+    .dot.review { background: var(--amber); border-color: var(--amber); }
+    .hero-card { padding: 1rem; margin-bottom: 1rem; }
+    .question-card { padding: 1rem; }
+    .kicker { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .65rem; }
+    .pill { display: inline-flex; align-items: center; min-height: 24px; padding: .15rem .48rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: .74rem; font-weight: 750; }
+    .pill.good { color: var(--green); border-color: rgba(125,211,168,.38); background: rgba(125,211,168,.08); }
+    .pill.warn { color: var(--amber); border-color: rgba(250,204,21,.34); background: rgba(250,204,21,.08); }
+    .skill-title { font-size: 1.55rem; line-height: 1.12; margin-bottom: .5rem; }
+    .hint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .58rem; margin: .85rem 0; }
+    .hint-box { border: 1px solid rgba(190,242,255,.14); border-radius: var(--r); background: rgba(255,255,255,.035); padding: .62rem; min-height: 72px; }
+    .hint-box span { display: block; color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem; }
+    .hint-box strong { display: block; font-size: .84rem; line-height: 1.32; }
+    .variant-list { display: grid; gap: .42rem; margin: .2rem 0 .85rem; }
+    .variant-chip {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .58rem; align-items: center;
+      border: 1px solid rgba(190,242,255,.14); border-radius: var(--r);
+      background: rgba(255,255,255,.035); padding: .56rem .62rem;
+    }
+    .variant-chip strong { display: block; font-size: .84rem; line-height: 1.25; }
+    .variant-chip span { color: var(--muted); font-size: .72rem; line-height: 1.3; }
+    .match-panel { display: grid; gap: .42rem; margin-top: .48rem; }
+    .match-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .58rem; align-items: center;
+      border: 1px solid rgba(190,242,255,.14); border-radius: var(--r);
+      background: rgba(255,255,255,.035); padding: .52rem .6rem;
+    }
+    .match-row strong { display: block; font-size: .82rem; line-height: 1.25; }
+    .match-row span { color: var(--muted); font-size: .72rem; line-height: 1.3; }
+    .match-row.ok { border-color: rgba(125,211,168,.34); background: rgba(125,211,168,.07); }
+    .match-row.warn { border-color: rgba(250,204,21,.28); background: rgba(250,204,21,.065); }
+    .toggle-line { display: flex; align-items: center; gap: .5rem; color: var(--text); font-size: .88rem; font-weight: 750; cursor: pointer; }
+    .toggle-line input { width: auto; accent-color: var(--cyan); }
+    .msg { display: none; padding: .55rem .7rem; border-radius: var(--r); margin: .65rem 0; font-size: .84rem; border: 1px solid var(--border); }
+    .msg.show { display: block; }
+    .msg-ok { color: var(--green); background: rgba(125,211,168,.1); border-color: rgba(125,211,168,.28); }
+    .msg-info { color: var(--cyan); background: rgba(110,231,249,.1); border-color: rgba(110,231,249,.28); }
+    .msg-err { color: var(--rose); background: rgba(251,113,133,.1); border-color: rgba(251,113,133,.28); }
+    .login { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: end; margin-top: .85rem; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .58rem; margin-top: .8rem; }
+    .stat { border: 1px solid rgba(190,242,255,.14); border-radius: var(--r); background: rgba(255,255,255,.035); padding: .62rem; }
+    .stat strong { display: block; font-size: 1.25rem; }
+    .stat span { color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .review-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .7rem; }
+    .review-table th, .review-table td { padding: .42rem .5rem; border-bottom: 1px solid rgba(190,242,255,.12); text-align: left; vertical-align: top; }
+    .review-table th { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+    [hidden] { display: none !important; }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { position: static; max-height: none; }
+      .grid2, .hint-grid, .stats, .login { grid-template-columns: 1fr; }
+      .header-actions { margin-left: 0; }
+      .skill-title { font-size: 1.28rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Blading Manager · Questionario Skill</div>
+    <div class="header-actions" id="header-actions" hidden>
+      <button class="btn btn-sm" onclick="downloadJson()">Export JSON</button>
+      <button class="btn btn-sm btn-danger" onclick="clearLocalDrafts()">Svuota locale</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card hero-card">
+      <h1>Definizione skill, una alla volta</h1>
+      <p>Ogni scheda parte gia compilata dal catalogo metodologico. Tu correggi ramo, livello didattico, prerequisiti e varianti; poi salvi nel DB dedicato per riusarle nel gestionale serio.</p>
+      <div id="auth-box" class="login">
+        <div class="field" style="margin:0"><label>Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="email"></div>
+        <div class="field" style="margin:0"><label>Password</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="password"></div>
+        <button class="btn btn-primary" onclick="login()">Accedi</button>
+      </div>
+      <div id="session-box" class="toolbar" hidden>
+        <span id="session-label" class="pill good"></span>
+        <button class="btn btn-sm" onclick="logout()">Esci</button>
+        <button class="btn btn-sm btn-primary" onclick="syncAllDrafts()">Sincronizza bozze locali</button>
+      </div>
+      <div id="global-msg" class="msg"></div>
+      <div id="locked-box">
+        <p>Accedi per vedere il catalogo, le revisioni e i collegamenti sincronizzati con il DB.</p>
+      </div>
+      <div class="stats" id="stats" hidden></div>
+    </section>
+
+    <div class="layout" id="app-layout" hidden>
+      <aside class="card panel side">
+        <h2>Catalogo</h2>
+        <div class="field"><label>Cerca</label><input id="search" placeholder="Nome skill..." oninput="renderList()"></div>
+        <div class="grid2">
+          <div class="field"><label>Ramo</label><select id="filter-branch" onchange="renderList()"></select></div>
+          <div class="field"><label>Stato</label><select id="filter-state" onchange="renderList()">
+            <option value="">Tutte</option>
+            <option value="missing">Non salvate</option>
+            <option value="bozza">Bozza</option>
+            <option value="revisionata">Revisionate</option>
+            <option value="da_rivedere">Da rivedere</option>
+            <option value="approvata">Approvate</option>
+          </select></div>
+        </div>
+        <div class="progress-line">
+          <div class="bar"><span id="progress-bar"></span></div>
+          <span id="progress-label">0/0</span>
+        </div>
+        <div class="skill-list" id="skill-list"></div>
+      </aside>
+
+      <section class="card question-card">
+        <div id="question-empty" class="empty" hidden>Nessuna skill selezionata.</div>
+        <div id="question-form">
+          <div class="kicker" id="skill-kicker"></div>
+          <h2 class="skill-title" id="skill-title"></h2>
+          <div class="hint-grid" id="hint-grid"></div>
+          <div id="defined-variants"></div>
+
+          <div class="grid2">
+            <div class="field">
+              <label>Ramo di appartenenza</label>
+              <select id="field-ramo">
+                <option>Equilibrio</option>
+                <option>Andatura</option>
+                <option>Frenata</option>
+                <option>Rotazione</option>
+                <option>Extra</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Livello didattico</label>
+              <select id="field-fascia">
+                <option>Base</option>
+                <option>Intermedio</option>
+                <option>Avanzato</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Prerequisiti</label>
+            <textarea id="field-prereq" oninput="renderPrereqSuggestions()"></textarea>
+            <div id="prereq-suggestions" class="match-panel"></div>
+          </div>
+          <div class="field">
+            <label>Cosa sblocca / requisito per cosa</label>
+            <textarea id="field-sblocca" oninput="renderUnlockSuggestions()" placeholder="Skill che diventano accessibili dopo questa..."></textarea>
+            <div id="unlock-suggestions" class="match-panel"></div>
+          </div>
+          <div class="field">
+            <label>Variante</label>
+            <label class="toggle-line">
+              <input id="field-e-variante" type="checkbox" onchange="toggleVariantPanel()">
+              Questa skill e una variante di una skill esistente
+            </label>
+          </div>
+          <div id="variant-panel" hidden>
+            <div class="field">
+              <label>Skill madre</label>
+              <input id="field-variante-di" type="text" placeholder="Es. Powerslide, Curva carrellata..." oninput="renderVariantSuggestion()">
+              <div id="variant-suggestion" class="match-panel"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Note revisione</label>
+            <textarea id="field-note" placeholder="Dubbi, modifiche future, esempi da aggiungere..."></textarea>
+          </div>
+
+          <div id="save-msg" class="msg"></div>
+          <div class="toolbar">
+            <button class="btn" onclick="prevSkill()">Indietro</button>
+            <button class="btn btn-primary" onclick="saveDefinition('revisionata')">Salva revisionata</button>
+            <button class="btn" onclick="saveDefinition('bozza')">Salva bozza</button>
+            <button class="btn" onclick="saveDefinition('da_rivedere')">Segna da rivedere</button>
+            <button class="btn" onclick="nextSkill()">Avanti</button>
+          </div>
+        </div>
+
+        <div class="panel" style="padding-left:0;padding-right:0">
+          <h2>Ultime definizioni salvate</h2>
+          <div id="recent"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./skilltree-catalog.js?v=202605111950"></script>
+  <script>
+    const SUPA_URL = 'https://mhioneawefsvagbccsum.supabase.co'
+    const SUPA_KEY = 'sb_publishable_SGGdSVxCEAXLgMGAjRksMQ_PbIvMIuH'
+    const BRANCHES = ['Equilibrio', 'Andatura', 'Frenata', 'Rotazione', 'Extra']
+    const branchMap = { stance: 'Equilibrio', gait: 'Andatura', break: 'Frenata', rotation: 'Rotazione' }
+    const branchTone = { Equilibrio: 'Stance', Andatura: 'Gait', Frenata: 'Brake', Rotazione: 'Rotation', Extra: 'Extra' }
+    const localKey = 'skillQuestionarioDrafts'
+    let sb = null
+    let session = null
+    let skills = []
+    let definitions = new Map()
+    let currentIndex = 0
+
+    try { sb = supabase.createClient(SUPA_URL, SUPA_KEY) } catch (e) { setGlobal('SDK Supabase non disponibile: ' + e.message, 'msg-err') }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    }
+
+    function fasciaFor(level) {
+      if (level <= 3) return 'Base'
+      if (level <= 6) return 'Intermedio'
+      return 'Avanzato'
+    }
+
+    function splitLines(value) {
+      return String(value || '').split(/\n|,/).map(v => v.trim()).filter(Boolean)
+    }
+
+    function normalizeName(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+    }
+
+    function skillCatalogForMatch() {
+      return skills.map(skill => mergedSkill(skill))
+    }
+
+    function findPrereqMatch(rawName) {
+      const target = normalizeName(rawName)
+      if (!target) return null
+      const catalog = skillCatalogForMatch()
+      const exact = catalog.find(skill => normalizeName(skill.skill_nome) === target)
+      if (exact) return { ...exact, score: 100, exact: true }
+
+      const targetTokens = new Set(target.split(' ').filter(Boolean))
+      const candidates = catalog
+        .filter(skill => normalizeName(skill.skill_nome) !== normalizeName(skills[currentIndex]?.skill_nome))
+        .map(skill => {
+          const name = normalizeName(skill.skill_nome)
+          const nameTokens = new Set(name.split(' ').filter(Boolean))
+          const shared = [...targetTokens].filter(token => nameTokens.has(token)).length
+          const includes = name.includes(target) || target.includes(name)
+          const score = (includes ? 60 : 0) + shared * 18 - Math.abs(name.length - target.length) * .2
+          return { ...skill, score: Math.round(score), exact: false }
+        })
+        .filter(skill => skill.score >= 35)
+        .sort((a, b) => b.score - a.score || String(a.skill_nome).localeCompare(String(b.skill_nome)))
+
+      return candidates[0] || null
+    }
+
+    function matchToPayload(rawName, match) {
+      return {
+        testo: rawName || '',
+        skill_nome: match?.skill_nome || null,
+        skill_id: match?.skill_id || null,
+        ramo: match?.ramo || null,
+        livello_num: match?.livello_num || null,
+        score: match?.score || 0,
+        exact: !!match?.exact
+      }
+    }
+
+    function buildPrereqMatches() {
+      return splitLines(document.getElementById('field-prereq')?.value || '').map((name, index) => {
+        const match = findPrereqMatch(name)
+        return { index, ...matchToPayload(name, match) }
+      })
+    }
+
+    function buildUnlockMatches() {
+      return splitLines(document.getElementById('field-sblocca')?.value || '').map((name, index) => {
+        const match = findPrereqMatch(name)
+        return { index, ...matchToPayload(name, match) }
+      })
+    }
+
+    function buildVariantMatch() {
+      const checked = document.getElementById('field-e-variante')?.checked
+      const rawName = document.getElementById('field-variante-di')?.value?.trim() || ''
+      if (!checked || !rawName) return null
+      return matchToPayload(rawName, findPrereqMatch(rawName))
+    }
+
+    function normalizeNode(node, i) {
+      const ramo = branchMap[node.branch] || 'Equilibrio'
+      return {
+        local_id: `catalog-${i}`,
+        skill_id: null,
+        skill_nome: node.name,
+        ramo,
+        fascia_livello: fasciaFor(node.level),
+        livello_num: node.level,
+        prerequisiti: node.prereq || [],
+        sblocca: [],
+        cosa_fa: '',
+        come_si_fa: '',
+        varianti: node.variants || [],
+        note_revisione: '',
+        stato: 'bozza',
+        key: !!node.key,
+        catalog_note: node.note || ''
+      }
+    }
+
+    function loadLocalDrafts() {
+      try {
+        return new Map(JSON.parse(localStorage.getItem(localKey) || '[]').map(item => [item.skill_nome, item]))
+      } catch (e) {
+        return new Map()
+      }
+    }
+
+    function hydrateLocalDrafts() {
+      for (const [name, draft] of loadLocalDrafts()) definitions.set(name, draft)
+    }
+
+    function saveLocalDraft(def) {
+      const local = loadLocalDrafts()
+      local.set(def.skill_nome, { ...def, salvato_locale_il: new Date().toISOString() })
+      localStorage.setItem(localKey, JSON.stringify([...local.values()]))
+      definitions.set(def.skill_nome, local.get(def.skill_nome))
+    }
+
+    function uniqueTextList(items = []) {
+      const seen = new Set()
+      return items.map(item => String(item || '').trim()).filter(item => {
+        const key = normalizeName(item)
+        if (!key || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+    }
+
+    function uniqueMatchList(items = []) {
+      const seen = new Set()
+      return items.filter(item => item && (item.skill_nome || item.testo)).filter(item => {
+        const key = normalizeName(item.skill_nome || item.testo)
+        if (!key || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+    }
+
+    function baseDefinitionForSkillName(skillName) {
+      const base = findSkillByName(skillName)
+      if (!base) return null
+      const merged = mergedSkill(base)
+      return {
+        skill_id: merged.skill_id || null,
+        skill_nome: merged.skill_nome,
+        ramo: merged.ramo,
+        fascia_livello: merged.fascia_livello,
+        livello_num: merged.livello_num,
+        prerequisiti: merged.prerequisiti || [],
+        prerequisiti_match: merged.prerequisiti_match || [],
+        sblocca: merged.sblocca || [],
+        sblocca_match: merged.sblocca_match || [],
+        e_variante: !!merged.e_variante,
+        variante_di: merged.variante_di || null,
+        variante_match: merged.variante_match || null,
+        cosa_fa: merged.cosa_fa || '',
+        come_si_fa: merged.come_si_fa || '',
+        varianti: merged.varianti || [],
+        note_revisione: merged.note_revisione || null,
+        stato: merged.stato || 'bozza',
+        maestro_id: session?.user?.id || merged.maestro_id || null,
+        revisionato_il: merged.revisionato_il || null
+      }
+    }
+
+    function selfMatchPayload(payload) {
+      return {
+        testo: payload.skill_nome,
+        skill_nome: payload.skill_nome,
+        skill_id: payload.skill_id || null,
+        ramo: payload.ramo || null,
+        livello_num: payload.livello_num || null,
+        score: 100,
+        exact: true
+      }
+    }
+
+    function buildReciprocalDefinitions(payload) {
+      const related = new Map()
+      const selfMatch = selfMatchPayload(payload)
+      ;(payload.prerequisiti_match || []).forEach(match => {
+        if (!match.skill_nome || normalizeName(match.skill_nome) === normalizeName(payload.skill_nome)) return
+        const target = related.get(match.skill_nome) || baseDefinitionForSkillName(match.skill_nome)
+        if (!target) return
+        target.sblocca = uniqueTextList([...(target.sblocca || []), payload.skill_nome])
+        target.sblocca_match = uniqueMatchList([...(target.sblocca_match || []), selfMatch])
+        related.set(target.skill_nome, target)
+      })
+      ;(payload.sblocca_match || []).forEach(match => {
+        if (!match.skill_nome || normalizeName(match.skill_nome) === normalizeName(payload.skill_nome)) return
+        const target = related.get(match.skill_nome) || baseDefinitionForSkillName(match.skill_nome)
+        if (!target) return
+        target.prerequisiti = uniqueTextList([...(target.prerequisiti || []), payload.skill_nome])
+        target.prerequisiti_match = uniqueMatchList([...(target.prerequisiti_match || []), selfMatch])
+        related.set(target.skill_nome, target)
+      })
+      return [...related.values()]
+    }
+
+    function saveDefinitionSetLocal(payloads) {
+      payloads.forEach(saveLocalDraft)
+    }
+
+    function isMissingRemoteTable(error) {
+      return /skill_definizioni|schema cache|could not find the table/i.test(error?.message || '')
+    }
+
+    async function boot() {
+      skills = (window.SKILLTREE_NODES || []).map(normalizeNode)
+      const branchSelect = document.getElementById('filter-branch')
+      branchSelect.innerHTML = '<option value="">Tutti</option>' + BRANCHES.map(r => `<option>${r}</option>`).join('')
+      if (sb) {
+        const { data } = await sb.auth.getSession()
+        session = data?.session || null
+        if (session) {
+          hydrateLocalDrafts()
+          await hydrateRemote()
+        }
+      }
+      renderAuth()
+      if (session) renderAll()
+    }
+
+    async function hydrateRemote() {
+      if (!sb || !session) return
+      const [{ data: remoteDefs, error: defsError }, { data: remoteSkills }] = await Promise.all([
+        sb.from('skill_definizioni').select('*').order('aggiornato_il', { ascending: false }),
+        sb.from('skills').select('id,nome')
+      ])
+      if (defsError && isMissingRemoteTable(defsError)) {
+        setGlobal('DB remoto non ancora pronto: manca public.skill_definizioni o la cache REST non e aggiornata. Fai un hard refresh e riprova; le modifiche restano salvabili in locale.', 'msg-info')
+      }
+      const idByName = new Map((remoteSkills || []).map(s => [String(s.nome).toLowerCase(), s.id]))
+      skills = skills.map(s => ({ ...s, skill_id: idByName.get(s.skill_nome.toLowerCase()) || s.skill_id }))
+      ;(remoteDefs || []).forEach(def => definitions.set(def.skill_nome, def))
+    }
+
+    function renderAuth() {
+      const logged = !!session
+      document.getElementById('auth-box').hidden = logged
+      document.getElementById('session-box').hidden = !logged
+      document.getElementById('session-label').textContent = logged ? `Connesso: ${session.user.email}` : ''
+      document.getElementById('header-actions').hidden = !logged
+      document.getElementById('stats').hidden = !logged
+      document.getElementById('app-layout').hidden = !logged
+      document.getElementById('locked-box').hidden = logged
+    }
+
+    function mergedSkill(skill) {
+      return { ...skill, ...(definitions.get(skill.skill_nome) || {}) }
+    }
+
+    function normalizedMotherName(def) {
+      return def?.variante_match?.skill_nome || def?.variante_di || ''
+    }
+
+    function variantsForSkill(skillName) {
+      const target = normalizeName(skillName)
+      return [...definitions.values()]
+        .filter(def => def.e_variante && normalizeName(normalizedMotherName(def)) === target)
+        .sort((a, b) => String(a.skill_nome).localeCompare(String(b.skill_nome)))
+    }
+
+    function findSkillByName(skillName) {
+      const target = normalizeName(skillName)
+      if (!target) return null
+      return skills.find(skill => normalizeName(skill.skill_nome) === target) || null
+    }
+
+    function matchedNames(rows = []) {
+      return rows.map(row => row?.skill_nome || row?.testo).filter(Boolean)
+    }
+
+    function hasRequirementLinks(skill) {
+      const def = mergedSkill(skill)
+      return !!((def.prerequisiti || []).length || (def.sblocca || []).length || (def.prerequisiti_match || []).length || (def.sblocca_match || []).length)
+    }
+
+    function logicalIssuesForSkill(skill) {
+      const def = mergedSkill(skill)
+      const name = def.skill_nome
+      const issues = []
+      ;(def.prerequisiti_match || []).forEach(match => {
+        if (!match.skill_nome) issues.push(`Prerequisito non agganciato: ${match.testo}`)
+        if (normalizeName(match.skill_nome) === normalizeName(name)) issues.push('Prerequisito uguale alla skill')
+      })
+      ;(def.sblocca_match || []).forEach(match => {
+        if (!match.skill_nome) issues.push(`Sblocco non agganciato: ${match.testo}`)
+        if (normalizeName(match.skill_nome) === normalizeName(name)) issues.push('Sblocco uguale alla skill')
+      })
+      if (def.e_variante && !def.variante_match?.skill_nome && def.variante_di) issues.push(`Skill madre non agganciata: ${def.variante_di}`)
+      if (def.e_variante && normalizeName(def.variante_match?.skill_nome || def.variante_di) === normalizeName(name)) issues.push('Variante agganciata a se stessa')
+      return issues
+    }
+
+    function filteredSkills() {
+      const q = document.getElementById('search').value.trim().toLowerCase()
+      const branch = document.getElementById('filter-branch').value
+      const state = document.getElementById('filter-state').value
+      return skills.filter(skill => {
+        const def = definitions.get(skill.skill_nome)
+        const merged = mergedSkill(skill)
+        if (q && !skill.skill_nome.toLowerCase().includes(q)) return false
+        if (branch && merged.ramo !== branch) return false
+        if (state === 'missing' && def) return false
+        if (state && state !== 'missing' && merged.stato !== state) return false
+        return true
+      })
+    }
+
+    function renderList() {
+      const list = filteredSkills()
+      const current = skills[currentIndex]
+      document.getElementById('skill-list').innerHTML = list.map(skill => {
+        const def = definitions.get(skill.skill_nome)
+        const merged = mergedSkill(skill)
+        const state = def?.stato || 'missing'
+        const cls = state === 'revisionata' || state === 'approvata' ? 'saved' : state === 'da_rivedere' ? 'review' : ''
+        const isReviewed = state === 'revisionata' || state === 'approvata'
+        const issues = logicalIssuesForSkill(skill)
+        const classes = [
+          'skill-item',
+          current?.skill_nome === skill.skill_nome ? 'active' : '',
+          merged.e_variante ? 'is-variant' : '',
+          hasRequirementLinks(skill) ? 'has-links' : '',
+          issues.length ? 'has-issues' : ''
+        ].filter(Boolean).join(' ')
+        const issueText = issues.join(' · ')
+        const issueAttrs = issues.length ? ` title="${esc(issueText)}" data-issue="${esc(issueText)}"` : ''
+        return `<button class="${classes}"${issueAttrs} onclick="selectSkill('${esc(skill.skill_nome)}')">
+          <b class="skill-check ${isReviewed ? 'on' : ''}">✓</b>
+          <span><strong>${esc(skill.skill_nome)}</strong><span>${esc(merged.ramo)} · ${esc(merged.fascia_livello)}</span></span>
+          <i class="dot ${cls}"></i>
+        </button>`
+      }).join('') || '<p>Nessuna skill in questo filtro.</p>'
+      renderStats()
+    }
+
+    function renderStats() {
+      const total = skills.length
+      const saved = [...definitions.values()].filter(d => ['revisionata','approvata'].includes(d.stato)).length
+      const review = [...definitions.values()].filter(d => d.stato === 'da_rivedere').length
+      const local = loadLocalDrafts().size
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><strong>${total}</strong><span>Skill</span></div>
+        <div class="stat"><strong>${saved}</strong><span>Revisionate</span></div>
+        <div class="stat"><strong>${review}</strong><span>Da rivedere</span></div>
+        <div class="stat"><strong>${local}</strong><span>Bozze locali</span></div>`
+      const pct = total ? Math.round((saved / total) * 100) : 0
+      document.getElementById('progress-bar').style.width = pct + '%'
+      document.getElementById('progress-label').textContent = `${saved}/${total}`
+    }
+
+    function renderQuestion() {
+      const base = skills[currentIndex]
+      if (!base) {
+        document.getElementById('question-empty').hidden = false
+        document.getElementById('question-form').hidden = true
+        return
+      }
+      const skill = mergedSkill(base)
+      document.getElementById('question-empty').hidden = true
+      document.getElementById('question-form').hidden = false
+      document.getElementById('skill-kicker').innerHTML = `
+        <span class="pill">${esc(skill.ramo)}</span>
+        <span class="pill">${esc(branchTone[skill.ramo] || 'Skill')}</span>
+        <span class="pill ${base.key ? 'good' : 'warn'}">${base.key ? 'Chiave' : 'Opzionale'}</span>
+        <span class="pill">${esc(skill.stato || 'bozza')}</span>`
+      document.getElementById('skill-title').textContent = skill.skill_nome
+      document.getElementById('hint-grid').innerHTML = `
+        <div class="hint-box"><span>Catalogo</span><strong>${esc(base.catalog_note || 'Nessuna nota')}</strong></div>
+        <div class="hint-box"><span>Varianti</span><strong>${esc((skill.varianti || []).join(', ') || 'Nessuna')}</strong></div>
+        <div class="hint-box"><span>Prereq proposti</span><strong>${esc((skill.prerequisiti || []).join(', ') || 'Nessuno')}</strong></div>`
+      renderDefinedVariants(skill.skill_nome)
+      document.getElementById('field-ramo').value = skill.ramo
+      document.getElementById('field-fascia').value = skill.fascia_livello
+      document.getElementById('field-prereq').value = (skill.prerequisiti || []).join('\n')
+      document.getElementById('field-sblocca').value = (skill.sblocca || []).join('\n')
+      document.getElementById('field-e-variante').checked = !!skill.e_variante
+      document.getElementById('field-variante-di').value = skill.variante_di || ''
+      toggleVariantPanel(false)
+      document.getElementById('field-note').value = skill.note_revisione || ''
+      renderPrereqSuggestions()
+      renderUnlockSuggestions()
+      setSave('')
+      renderList()
+    }
+
+    function renderDefinedVariants(skillName) {
+      const box = document.getElementById('defined-variants')
+      if (!box) return
+      const variants = variantsForSkill(skillName)
+      if (!variants.length) {
+        box.innerHTML = ''
+        return
+      }
+      box.innerHTML = `
+        <div class="field">
+          <label>Skill varianti definite</label>
+          <div class="variant-list">
+            ${variants.map(def => `
+              <div class="variant-chip">
+                <div>
+                  <strong>${esc(def.skill_nome)}</strong>
+                  <span>${esc(def.ramo || 'Extra')} · ${esc(def.fascia_livello || '')} · ${esc(def.stato || 'bozza')}</span>
+                </div>
+                <button class="btn btn-sm" type="button" onclick="selectSkill('${esc(def.skill_nome)}')">Apri</button>
+              </div>`).join('')}
+          </div>
+        </div>`
+    }
+
+    function renderPrereqSuggestions() {
+      const matches = buildPrereqMatches()
+      renderSkillMatchRows('prereq-suggestions', matches, 'Nessun prerequisito indicato', 'Scrivi una skill per ottenere il controllo automatico sul catalogo.', 'applyPrereqSuggestion')
+    }
+
+    function renderUnlockSuggestions() {
+      const matches = buildUnlockMatches()
+      renderSkillMatchRows('unlock-suggestions', matches, 'Nessuno sblocco indicato', 'Scrivi una skill per indicare per cosa diventa requisito questa skill.', 'applyUnlockSuggestion')
+    }
+
+    function renderSkillMatchRows(boxId, matches, emptyText, emptyHint, applyFnName) {
+      const box = document.getElementById(boxId)
+      if (!box) return
+      if (!matches.length) {
+        box.innerHTML = `<div class="match-row warn"><div><strong>${esc(emptyText)}</strong><span>${esc(emptyHint)}</span></div></div>`
+        return
+      }
+      box.innerHTML = matches.map(match => {
+        if (!match.skill_nome) {
+          return `<div class="match-row warn">
+            <div><strong>${esc(match.testo)}</strong><span>Nessuna skill con nome compatibile trovata nel catalogo.</span></div>
+          </div>`
+        }
+        const attrName = JSON.stringify(match.skill_nome).replace(/'/g, '&#39;')
+        const needsApply = normalizeName(match.testo) !== normalizeName(match.skill_nome)
+        return `<div class="match-row ${match.exact ? 'ok' : 'warn'}">
+          <div>
+            <strong>${esc(match.testo)} → ${esc(match.skill_nome)}</strong>
+            <span>${match.exact ? 'Match esatto' : 'Suggerimento'} · ${esc(match.ramo)} · ${esc(match.fascia_livello)} · confidenza ${esc(match.score)}%</span>
+          </div>
+          ${needsApply ? `<button class="btn btn-sm" type="button" onclick='${applyFnName}(${match.index}, ${attrName})'>Attribuisci</button>` : '<span class="pill good">Ok</span>'}
+        </div>`
+      }).join('')
+    }
+
+    function applyPrereqSuggestion(index, skillName) {
+      const field = document.getElementById('field-prereq')
+      const lines = splitLines(field.value)
+      lines[index] = skillName
+      field.value = lines.join('\n')
+      renderPrereqSuggestions()
+    }
+
+    function applyUnlockSuggestion(index, skillName) {
+      const field = document.getElementById('field-sblocca')
+      const lines = splitLines(field.value)
+      lines[index] = skillName
+      field.value = lines.join('\n')
+      renderUnlockSuggestions()
+    }
+
+    function toggleVariantPanel(shouldRender = true) {
+      const checked = document.getElementById('field-e-variante')?.checked
+      const panel = document.getElementById('variant-panel')
+      if (panel) panel.hidden = !checked
+      if (shouldRender) renderVariantSuggestion()
+    }
+
+    function renderVariantSuggestion() {
+      const box = document.getElementById('variant-suggestion')
+      if (!box) return
+      const checked = document.getElementById('field-e-variante')?.checked
+      const rawName = document.getElementById('field-variante-di')?.value?.trim() || ''
+      if (!checked) {
+        box.innerHTML = ''
+        return
+      }
+      if (!rawName) {
+        box.innerHTML = '<div class="match-row warn"><div><strong>Skill madre non indicata</strong><span>Scrivi il nome della skill da cui questa variante deriva.</span></div></div>'
+        return
+      }
+      const match = findPrereqMatch(rawName)
+      if (!match) {
+        box.innerHTML = `<div class="match-row warn"><div><strong>${esc(rawName)}</strong><span>Nessuna skill madre compatibile trovata nel catalogo.</span></div></div>`
+        return
+      }
+      const needsApply = normalizeName(rawName) !== normalizeName(match.skill_nome)
+      const attrName = JSON.stringify(match.skill_nome).replace(/'/g, '&#39;')
+      box.innerHTML = `<div class="match-row ${match.exact ? 'ok' : 'warn'}">
+        <div>
+          <strong>${esc(rawName)} → ${esc(match.skill_nome)}</strong>
+          <span>${match.exact ? 'Match esatto' : 'Suggerimento'} · ${esc(match.ramo)} · ${esc(match.fascia_livello)} · confidenza ${esc(match.score)}%</span>
+        </div>
+        ${needsApply ? `<button class="btn btn-sm" type="button" onclick='applyVariantSuggestion(${attrName})'>Attribuisci</button>` : '<span class="pill good">Ok</span>'}
+      </div>`
+    }
+
+    function applyVariantSuggestion(skillName) {
+      document.getElementById('field-variante-di').value = skillName
+      renderVariantSuggestion()
+    }
+
+    function collectDefinition(stato) {
+      const base = skills[currentIndex]
+      return {
+        skill_id: base.skill_id || null,
+        skill_nome: base.skill_nome,
+        ramo: document.getElementById('field-ramo').value,
+        fascia_livello: document.getElementById('field-fascia').value,
+        livello_num: base.livello_num || null,
+        prerequisiti: splitLines(document.getElementById('field-prereq').value),
+        prerequisiti_match: buildPrereqMatches(),
+        sblocca: splitLines(document.getElementById('field-sblocca').value),
+        sblocca_match: buildUnlockMatches(),
+        e_variante: document.getElementById('field-e-variante').checked,
+        variante_di: document.getElementById('field-e-variante').checked ? (document.getElementById('field-variante-di').value.trim() || null) : null,
+        variante_match: buildVariantMatch(),
+        cosa_fa: '',
+        come_si_fa: '',
+        varianti: base.varianti || [],
+        note_revisione: document.getElementById('field-note').value.trim() || null,
+        stato,
+        maestro_id: session?.user?.id || null,
+        revisionato_il: ['revisionata', 'approvata'].includes(stato) ? new Date().toISOString() : null
+      }
+    }
+
+    async function saveDefinition(stato) {
+      const payload = collectDefinition(stato)
+      const payloads = [payload, ...buildReciprocalDefinitions(payload)]
+      if (!sb || !session) {
+        saveDefinitionSetLocal(payloads)
+        setSave(payloads.length > 1 ? `Salvato localmente con ${payloads.length - 1} collegamenti reciproci.` : 'Salvato localmente. Accedi per inviarlo al DB.', 'msg-info')
+        renderAll()
+        return
+      }
+      const { data, error } = await sb.from('skill_definizioni').upsert(payloads, { onConflict: 'skill_nome' }).select()
+      if (error) {
+        saveDefinitionSetLocal(payloads.map(p => ({ ...p, errore_remoto: error.message })))
+        const msg = isMissingRemoteTable(error)
+          ? 'La tabella esiste, ma il browser sta ancora vedendo la vecchia cache REST. Ho salvato localmente: fai hard refresh e riprova la sync.'
+          : 'DB non raggiungibile o migration mancante. Salvato localmente: ' + error.message
+        setSave(msg, 'msg-err')
+      } else {
+        ;(data || []).forEach(def => definitions.set(def.skill_nome, def))
+        setSave(payloads.length > 1 ? `Salvato nel DB con ${payloads.length - 1} collegamenti reciproci.` : 'Salvato nel DB dedicato.', 'msg-ok')
+      }
+      renderAll()
+    }
+
+    async function syncAllDrafts() {
+      if (!sb || !session) {
+        setGlobal('Accedi prima di sincronizzare.', 'msg-info')
+        return
+      }
+      const drafts = [...loadLocalDrafts().values()]
+      if (!drafts.length) {
+        const originHint = location.protocol === 'file:'
+          ? ' Nota: questa pagina e aperta da file://, quindi usa un archivio locale diverso da localhost.'
+          : ''
+        setGlobal('Non ci sono bozze locali da sincronizzare. Se salvi mentre sei connesso, la definizione va gia direttamente nel DB.' + originHint, 'msg-info')
+        return
+      }
+      const expanded = new Map()
+      drafts.forEach(draft => {
+        expanded.set(draft.skill_nome, draft)
+        buildReciprocalDefinitions(draft).forEach(def => expanded.set(def.skill_nome, def))
+      })
+      const payload = [...expanded.values()].map(d => ({ ...d, maestro_id: session.user.id }))
+      const { data, error } = await sb.from('skill_definizioni').upsert(payload, { onConflict: 'skill_nome' }).select()
+      if (error) {
+        const msg = isMissingRemoteTable(error)
+          ? 'Sincronizzazione non completata: il DB e stato aggiornato, ma la pagina sta vedendo ancora la vecchia cache REST. Fai hard refresh della pagina e riprova.'
+          : 'Sincronizzazione non completata: ' + error.message
+        setGlobal(msg, 'msg-err')
+        return
+      }
+      localStorage.removeItem(localKey)
+      ;(data || []).forEach(def => definitions.set(def.skill_nome, def))
+      setGlobal(`Sincronizzate ${data?.length || 0} definizioni.`, 'msg-ok')
+      renderAll()
+    }
+
+    function selectSkill(name) {
+      const idx = skills.findIndex(s => s.skill_nome === name)
+      if (idx >= 0) currentIndex = idx
+      renderQuestion()
+    }
+
+    function nextSkill() {
+      currentIndex = Math.min(skills.length - 1, currentIndex + 1)
+      renderQuestion()
+    }
+
+    function prevSkill() {
+      currentIndex = Math.max(0, currentIndex - 1)
+      renderQuestion()
+    }
+
+    async function login() {
+      const email = document.getElementById('auth-email').value.trim()
+      const password = document.getElementById('auth-password').value
+      const { data, error } = await sb.auth.signInWithPassword({ email, password })
+      if (error) {
+        setGlobal('Login non riuscito: ' + error.message, 'msg-err')
+        return
+      }
+      session = data.session
+      hydrateLocalDrafts()
+      await hydrateRemote()
+      renderAuth()
+      renderAll()
+      setGlobal('Accesso effettuato.', 'msg-ok')
+    }
+
+    async function logout() {
+      await sb.auth.signOut()
+      session = null
+      definitions = new Map()
+      renderAuth()
+      setGlobal('Sessione chiusa. I nuovi salvataggi resteranno locali.', 'msg-info')
+    }
+
+    function renderRecent() {
+      const rows = [...definitions.values()]
+        .sort((a, b) => String(b.aggiornato_il || b.salvato_locale_il || '').localeCompare(String(a.aggiornato_il || a.salvato_locale_il || '')))
+        .slice(0, 8)
+      document.getElementById('recent').innerHTML = rows.length ? `
+        <table class="review-table">
+          <thead><tr><th>Skill</th><th>Ramo</th><th>Livello</th><th>Stato</th></tr></thead>
+          <tbody>${rows.map(r => `<tr><td>${esc(r.skill_nome)}</td><td>${esc(r.ramo)}</td><td>${esc(r.fascia_livello)}</td><td>${esc(r.stato)}</td></tr>`).join('')}</tbody>
+        </table>` : '<p>Nessuna definizione salvata ancora.</p>'
+    }
+
+    function renderAll() {
+      renderList()
+      renderQuestion()
+      renderRecent()
+      renderStats()
+    }
+
+    function downloadJson() {
+      const payload = skills.map(s => mergedSkill(s))
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `skill-definizioni-${new Date().toISOString().slice(0,10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    function clearLocalDrafts() {
+      if (!confirm('Vuoi cancellare solo le bozze locali non sincronizzate?')) return
+      localStorage.removeItem(localKey)
+      definitions = new Map([...definitions].filter(([, d]) => !d.salvato_locale_il))
+      renderAll()
+      setGlobal('Bozze locali cancellate.', 'msg-info')
+    }
+
+    function setGlobal(text, kind = '') {
+      const el = document.getElementById('global-msg')
+      if (!el) return
+      el.className = `msg ${kind} ${text ? 'show' : ''}`.trim()
+      el.textContent = text || ''
+    }
+
+    function setSave(text, kind = '') {
+      const el = document.getElementById('save-msg')
+      el.className = `msg ${kind} ${text ? 'show' : ''}`.trim()
+      el.textContent = text || ''
+    }
+
+    boot()
+  </script>
+</body>
+</html>
