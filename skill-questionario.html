@@ -141,7 +141,7 @@
     .pill.warn { color: var(--amber); border-color: rgba(250,204,21,.34); background: rgba(250,204,21,.08); }
     .skill-flow { display: grid; gap: .22rem; justify-items: center; text-align: center; margin: .7rem 0 .85rem; }
     .skill-title { font-size: 1.68rem; line-height: 1.12; margin: 0; text-align: center; }
-    .flow-side { max-width: 760px; color: var(--muted); font-size: .78rem; font-weight: 750; line-height: 1.35; }
+    .flow-side { max-width: 860px; color: var(--muted); font-size: .78rem; font-weight: 750; line-height: 1.4; }
     .flow-side span { color: var(--cyan); }
     .hint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .58rem; margin: .85rem 0; }
     .hint-box { border: 1px solid rgba(190,242,255,.14); border-radius: var(--r); background: rgba(255,255,255,.035); padding: .62rem; min-height: 72px; }
@@ -719,10 +719,9 @@
     }
 
     function flowText(items = [], emptyText) {
-      const list = uniqueTextList(items).slice(0, 4)
+      const list = uniqueTextList(items)
       if (!list.length) return emptyText
-      const extra = uniqueTextList(items).length - list.length
-      return `${list.join(' · ')}${extra > 0 ? ` · +${extra}` : ''}`
+      return list.join(' · ')
     }
 
     function variantSkillName(parentName, variantName) {
