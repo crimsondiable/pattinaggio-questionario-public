@@ -189,6 +189,63 @@
     .review-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .7rem; }
     .review-table th, .review-table td { padding: .42rem .5rem; border-bottom: 1px solid rgba(190,242,255,.12); text-align: left; vertical-align: top; }
     .review-table th { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+    .view-tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(110,231,249,.12); }
+    .tree-card { padding: 1rem; }
+    .tree-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; margin-bottom: .85rem; }
+    .tree-tools { display: flex; gap: .58rem; flex-wrap: wrap; justify-content: flex-end; align-items: end; }
+    .tree-tools .field { min-width: 150px; margin: 0; }
+    .tree-summary { color: var(--muted); font-size: .82rem; font-weight: 750; margin-bottom: .6rem; }
+    .tree-wrap {
+      position: relative;
+      min-height: 520px;
+      overflow: auto;
+      border: 1px solid rgba(190,242,255,.14);
+      border-radius: var(--r);
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      background-size: 230px 100%, 100% 100%;
+    }
+    .tree-canvas { position: relative; min-width: 720px; min-height: 520px; }
+    .tree-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .tree-edge { stroke: rgba(110,231,249,.36); stroke-width: 1.4; fill: none; }
+    .tree-edge.variant { stroke: rgba(250,204,21,.45); stroke-dasharray: 6 5; }
+    .tree-node {
+      position: absolute;
+      width: 174px;
+      min-height: 48px;
+      padding: .44rem .52rem;
+      border: 1px solid rgba(190,242,255,.2);
+      border-radius: var(--r);
+      background: rgba(12,24,31,.94);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 8px 22px rgba(0,0,0,.24);
+    }
+    .tree-node:hover, .tree-node.active { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(110,231,249,.22), 0 0 24px rgba(110,231,249,.16); }
+    .tree-node.variant { border-style: dashed; }
+    .tree-node.issue { border-color: rgba(251,113,133,.68); box-shadow: 0 0 18px rgba(251,113,133,.22); }
+    .tree-node strong { display: block; font-size: .76rem; line-height: 1.18; }
+    .tree-node span { display: block; margin-top: .16rem; color: var(--muted); font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+    .tree-branch-label {
+      position: absolute;
+      left: 18px;
+      color: var(--cyan);
+      font-size: .72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .tree-level-label {
+      position: absolute;
+      top: 14px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
     [hidden] { display: none !important; }
     @media (max-width: 860px) {
       .layout { grid-template-columns: 1fr; }
@@ -196,13 +253,18 @@
       .grid2, .hint-grid, .stats, .login { grid-template-columns: 1fr; }
       .header-actions { margin-left: 0; }
       .skill-title { font-size: 1.32rem; }
+      .tree-head { grid-template-columns: 1fr; }
+      .tree-tools { justify-content: stretch; }
+      .tree-tools .field { flex: 1 1 150px; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">Blading Manager · Questionario Skill <small id="app-version">v2026-05-12.2</small></div>
+    <div class="brand">Blading Manager · Questionario Skill <small id="app-version">v2026-05-14.1</small></div>
     <div class="header-actions" id="header-actions" hidden>
+      <button class="btn btn-sm view-tab active" id="tab-questionario" onclick="showView('questionario')">Questionario</button>
+      <button class="btn btn-sm view-tab" id="tab-tree" onclick="showView('tree')">Skill tree</button>
       <button class="btn btn-sm" onclick="downloadJson()">Export JSON</button>
     </div>
   </header>
@@ -333,6 +395,30 @@
         </div>
       </section>
     </div>
+
+    <section class="card tree-card" id="tree-view" hidden>
+      <div class="tree-head">
+        <div>
+          <h2>Skill tree</h2>
+          <p>Tutte le connessioni dichiarate tra prerequisiti, sblocchi e varianti.</p>
+        </div>
+        <div class="tree-tools">
+          <div class="field"><label>Ramo</label><select id="tree-filter-branch" onchange="renderTree()"></select></div>
+          <div class="field"><label>Varianti</label><select id="tree-filter-variants" onchange="renderTree()">
+            <option value="">Tutte</option>
+            <option value="hide">Nascondi</option>
+            <option value="only">Solo varianti</option>
+          </select></div>
+        </div>
+      </div>
+      <div class="tree-summary" id="tree-summary"></div>
+      <div class="tree-wrap">
+        <div class="tree-canvas" id="tree-canvas">
+          <svg class="tree-svg" id="tree-svg"></svg>
+          <div id="tree-nodes"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -352,6 +438,7 @@
     let currentIndex = 0
     let draggedSkillName = null
     let suppressClickUntil = 0
+    let currentView = 'questionario'
 
     try {
       sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
@@ -628,6 +715,8 @@
       applyCatalogOrder()
       const branchSelect = document.getElementById('filter-branch')
       branchSelect.innerHTML = '<option value="">Tutti</option>' + BRANCHES.map(r => `<option>${r}</option>`).join('')
+      const treeBranchSelect = document.getElementById('tree-filter-branch')
+      if (treeBranchSelect) treeBranchSelect.innerHTML = '<option value="">Tutti</option>' + BRANCHES.map(r => `<option>${r}</option>`).join('')
       if (sb) {
         const { data } = await sb.auth.getSession()
         session = data?.session || null
@@ -684,7 +773,8 @@
       document.getElementById('session-label').textContent = logged ? `Connesso: ${session.user.email}` : ''
       document.getElementById('header-actions').hidden = !logged
       document.getElementById('stats').hidden = !logged
-      document.getElementById('app-layout').hidden = !logged
+      document.getElementById('app-layout').hidden = !logged || currentView !== 'questionario'
+      document.getElementById('tree-view').hidden = !logged || currentView !== 'tree'
       document.getElementById('locked-box').hidden = logged
     }
 
@@ -722,6 +812,128 @@
       const list = uniqueTextList(items)
       if (!list.length) return emptyText
       return list.join(' · ')
+    }
+
+    function showView(view) {
+      currentView = view
+      const logged = !!session
+      document.getElementById('app-layout').hidden = !logged || view !== 'questionario'
+      document.getElementById('tree-view').hidden = !logged || view !== 'tree'
+      document.getElementById('tab-questionario')?.classList.toggle('active', view === 'questionario')
+      document.getElementById('tab-tree')?.classList.toggle('active', view === 'tree')
+      if (view === 'tree' && logged) renderTree()
+    }
+
+    function namesFromMatches(matches = []) {
+      return uniqueTextList(matches.map(match => match?.skill_nome || match?.testo).filter(Boolean))
+    }
+
+    function linkedNames(skill, fieldName, matchName) {
+      const matchNames = namesFromMatches(skill[matchName] || [])
+      return matchNames.length ? matchNames : uniqueTextList(skill[fieldName] || [])
+    }
+
+    function treeVisibleSkills() {
+      const branch = document.getElementById('tree-filter-branch')?.value || ''
+      const variantFilter = document.getElementById('tree-filter-variants')?.value || ''
+      return skills.map(skill => mergedSkill(skill)).filter(skill => {
+        if (branch && skill.ramo !== branch) return false
+        if (variantFilter === 'hide' && skill.e_variante) return false
+        if (variantFilter === 'only' && !skill.e_variante) return false
+        return true
+      })
+    }
+
+    function treeEdgesFor(nodes) {
+      const byName = new Map(nodes.map(node => [normalizeName(node.skill_nome), node]))
+      const edges = new Map()
+      const addEdge = (fromName, toName, type = 'req') => {
+        const fromKey = normalizeName(fromName)
+        const toKey = normalizeName(toName)
+        if (!fromKey || !toKey || fromKey === toKey || !byName.has(fromKey) || !byName.has(toKey)) return
+        const key = `${fromKey}->${toKey}:${type}`
+        edges.set(key, { from: byName.get(fromKey).skill_nome, to: byName.get(toKey).skill_nome, type })
+      }
+      nodes.forEach(skill => {
+        linkedNames(skill, 'prerequisiti', 'prerequisiti_match').forEach(name => addEdge(name, skill.skill_nome))
+        linkedNames(skill, 'sblocca', 'sblocca_match').forEach(name => addEdge(skill.skill_nome, name))
+        if (skill.e_variante) addEdge(normalizedMotherName(skill), skill.skill_nome, 'variant')
+      })
+      return [...edges.values()]
+    }
+
+    function renderTree() {
+      const canvas = document.getElementById('tree-canvas')
+      const svg = document.getElementById('tree-svg')
+      const nodeBox = document.getElementById('tree-nodes')
+      const summary = document.getElementById('tree-summary')
+      if (!canvas || !svg || !nodeBox) return
+      const visible = treeVisibleSkills()
+      const edges = treeEdgesFor(visible)
+      const levelOrder = ['Base', 'Intermedio', 'Avanzato']
+      const levelWidth = 230
+      const nodeWidth = 174
+      const nodeHeight = 50
+      const nodeGap = 16
+      const branchGap = 78
+      const topPad = 58
+      const leftPad = 24
+      const positions = new Map()
+      let yOffset = topPad
+      let labelHtml = levelOrder.map((level, index) => `<div class="tree-level-label" style="left:${leftPad + index * levelWidth}px">${esc(level)}</div>`).join('')
+      BRANCHES.forEach(branch => {
+        const branchNodes = visible.filter(skill => skill.ramo === branch)
+        if (!branchNodes.length) return
+        const byLevel = levelOrder.map(level => branchNodes
+          .filter(skill => skill.fascia_livello === level)
+          .sort((a, b) => skills.findIndex(s => normalizeName(s.skill_nome) === normalizeName(a.skill_nome)) - skills.findIndex(s => normalizeName(s.skill_nome) === normalizeName(b.skill_nome))))
+        const maxRows = Math.max(1, ...byLevel.map(list => list.length))
+        labelHtml += `<div class="tree-branch-label" style="top:${yOffset - 28}px">${esc(branch)}</div>`
+        byLevel.forEach((list, levelIndex) => {
+          list.forEach((skill, rowIndex) => {
+            positions.set(skill.skill_nome, {
+              x: leftPad + levelIndex * levelWidth,
+              y: yOffset + rowIndex * (nodeHeight + nodeGap),
+              skill
+            })
+          })
+        })
+        yOffset += maxRows * (nodeHeight + nodeGap) + branchGap
+      })
+      const width = Math.max(720, leftPad * 2 + levelOrder.length * levelWidth)
+      const height = Math.max(520, yOffset)
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+      svg.innerHTML = edges.map(edge => {
+        const from = positions.get(edge.from)
+        const to = positions.get(edge.to)
+        if (!from || !to) return ''
+        const x1 = from.x + nodeWidth
+        const y1 = from.y + nodeHeight / 2
+        const x2 = to.x
+        const y2 = to.y + nodeHeight / 2
+        const mid = Math.max(x1 + 30, (x1 + x2) / 2)
+        return `<path class="tree-edge ${edge.type === 'variant' ? 'variant' : ''}" d="M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}" />`
+      }).join('')
+      nodeBox.innerHTML = labelHtml + [...positions.values()].map(({ x, y, skill }) => {
+        const issues = logicalIssuesForSkill(skill)
+        const className = ['tree-node', skill.e_variante ? 'variant' : '', issues.length ? 'issue' : '', skills[currentIndex]?.skill_nome === skill.skill_nome ? 'active' : ''].filter(Boolean).join(' ')
+        const skillArg = JSON.stringify(skill.skill_nome).replace(/'/g, '&#39;')
+        const title = issues.length ? issues.join(' · ') : `${linkedNames(skill, 'prerequisiti', 'prerequisiti_match').length} prereq · ${linkedNames(skill, 'sblocca', 'sblocca_match').length} sblocca`
+        return `<button class="${className}" style="left:${x}px;top:${y}px" title="${esc(title)}" onclick='openTreeSkill(${skillArg})'>
+          <strong>${esc(skill.skill_nome)}</strong>
+          <span>${esc(skill.ramo)} · ${esc(skill.fascia_livello)}${skill.e_variante ? ' · Variante' : ''}</span>
+        </button>`
+      }).join('')
+      summary.textContent = `${visible.length} skill visibili · ${edges.length} connessioni`
+    }
+
+    function openTreeSkill(skillName) {
+      const idx = skills.findIndex(skill => normalizeName(skill.skill_nome) === normalizeName(skillName))
+      if (idx >= 0) currentIndex = idx
+      showView('questionario')
+      renderQuestion()
     }
 
     function variantSkillName(parentName, variantName) {
@@ -1344,6 +1556,7 @@
       renderQuestion()
       renderRecent()
       renderStats()
+      if (currentView === 'tree') renderTree()
     }
 
     function downloadJson() {
